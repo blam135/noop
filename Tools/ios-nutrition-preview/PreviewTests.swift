@@ -12,6 +12,8 @@ final class NutritionPreviewTests: XCTestCase {
         XCTAssertTrue(edit.waitForExistence(timeout: 10))
         edit.tap()
         XCTAssertTrue(app.buttons["Analyze photo"].waitForExistence(timeout: 15))
+        XCTAssertEqual(app.textFields["Food"].value as? String, "Fruit bowl")
+        XCTAssertTrue(app.buttons["Analyze photo"].isEnabled)
         capture("ios-photo-editor")
     }
 

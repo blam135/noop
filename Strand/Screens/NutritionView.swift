@@ -10,8 +10,11 @@ import UIKit
 @MainActor struct NutritionView: View {
     @StateObject private var journal = NutritionStore()
     @State private var day = Date()
-    @State private var editing: NutritionMeal?
-    @State private var showEditor = false
+    private struct EditorSelection: Identifiable {
+        let id = UUID()
+        let meal: NutritionMeal?
+    }
+    @State private var editing: EditorSelection?
     @State private var deleting: NutritionMeal?
 
     private var meals: [NutritionMeal] { journal.meals.filter { Calendar.current.isDate($0.date, inSameDayAs: day) } }
@@ -25,7 +28,7 @@ import UIKit
                         .font(StrandFont.title1)
                     Text("Protein \(meals.reduce(0) { $0 + $1.protein }, specifier: "%.1f") g · Carbs \(meals.reduce(0) { $0 + $1.carbs }, specifier: "%.1f") g · Fat \(meals.reduce(0) { $0 + $1.fat }, specifier: "%.1f") g")
                         .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
-                    Button { editing = nil; showEditor = true } label: { Label("Log a meal", systemImage: "plus") }
+                    Button { editing = EditorSelection(meal: nil) } label: { Label("Log a meal", systemImage: "plus") }
                 }
             }
             if meals.isEmpty {
@@ -52,7 +55,7 @@ import UIKit
                         }
                         if !meal.notes.isEmpty { Text(meal.notes).font(StrandFont.footnote) }
                         HStack {
-                            Button("Edit") { editing = meal; showEditor = true }
+                            Button("Edit") { editing = EditorSelection(meal: meal) }
                             Button("Delete", role: .destructive) { deleting = meal }
                         }
                     }
@@ -62,8 +65,8 @@ import UIKit
                 .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
         }
         .task { journal.load() }
-        .sheet(isPresented: $showEditor) {
-            NutritionMealEditor(journal: journal, initial: editing, day: day)
+        .sheet(item: $editing) { selection in
+            NutritionMealEditor(journal: journal, initial: selection.meal, day: day)
         }
         .alert("Nutrition", isPresented: Binding(get: { journal.error != nil }, set: { if !$0 { journal.error = nil } })) {
             Button("OK", role: .cancel) { journal.error = nil }
