@@ -803,31 +803,6 @@ class AiCoach(
         return base + "/models"
     }
 
-    /**
-     * Gatekeeper for the Custom (local LLM) provider. https:// is always fine. Plain http:// is
-     * allowed only for local user-owned endpoints: loopback, RFC1918 private LAN addresses,
-     * IPv4 link-local addresses, and *.local mDNS names. Android XML cannot express those CIDR
-     * ranges, so network-security-config permits platform cleartext and this guard is the public
-     * HTTP boundary.
-     */
-    private fun guardCustomUrl(base: String) {
-        val uri = runCatching { java.net.URI(base) }.getOrNull()
-        val host = uri?.host
-        val scheme = uri?.scheme?.lowercase()
-        require(host != null && !scheme.isNullOrBlank()) {
-            "That server URL isn't valid. Use http://<host>:<port> for a local server, or https://… for a remote one."
-        }
-        if (scheme == "https") return
-        require(scheme == "http") {
-            "Unsupported URL scheme \"$scheme\". Use http:// for a local server or https:// for a remote one."
-        }
-        require(isPrivateLanOrLoopback(host)) {
-            "Plain http:// is only allowed for localhost, private LAN IPs, link-local IPs, or " +
-                ".local hostnames. Use https:// to reach \"$host\"."
-        }
-    }
-
-
     // ---------------------------------------------------------------------------------------
     // Anthropic, POST /v1/messages
     // ---------------------------------------------------------------------------------------
@@ -1191,6 +1166,30 @@ class AiCoach(
     }
 
     companion object {
+        /**
+         * Gatekeeper for the Custom (local LLM) provider. https:// is always fine. Plain http:// is
+         * allowed only for local user-owned endpoints: loopback, RFC1918 private LAN addresses,
+         * IPv4 link-local addresses, and *.local mDNS names. Android XML cannot express those CIDR
+         * ranges, so network-security-config permits platform cleartext and this guard is the public
+         * HTTP boundary.
+         */
+        internal fun guardCustomUrl(base: String) {
+            val uri = runCatching { java.net.URI(base) }.getOrNull()
+            val host = uri?.host
+            val scheme = uri?.scheme?.lowercase()
+            require(host != null && !scheme.isNullOrBlank()) {
+                "That server URL isn't valid. Use http://<host>:<port> for a local server, or https://… for a remote one."
+            }
+            if (scheme == "https") return
+            require(scheme == "http") {
+                "Unsupported URL scheme \"$scheme\". Use http:// for a local server or https:// for a remote one."
+            }
+            require(isPrivateLanOrLoopback(host)) {
+                "Plain http:// is only allowed for localhost, private LAN IPs, link-local IPs, or " +
+                    ".local hostnames. Use https:// to reach \"$host\"."
+            }
+        }
+
         private val JSON = "application/json; charset=utf-8".toMediaType()
 
         /**

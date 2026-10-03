@@ -1,0 +1,22 @@
+valid:Rice and chicken|1 bowl|540.5|35.0|65.0|15.0
+fenced:Rice and chicken|1 bowl|540.5|35.0|65.0|15.0
+negative:rejected
+too-large:rejected
+negative-protein:rejected
+large-fat:rejected
+blank-name:rejected
+numeric-string:rejected
+boolean:rejected
+null:rejected
+long-name:rejected
+unicode-long-name:rejected
+unicode-name:寿司 🍣|1 bowl|540.5|35.0|65.0|15.0
+long-notes:rejected
+zero:Rice and chicken|1 bowl|0.0|35.0|65.0|15.0
+upper-bound:Rice and chicken|1 bowl|20000.0|35.0|65.0|15.0
+macro-bound:Rice and chicken|1 bowl|540.5|5000.0|65.0|15.0
+missing-fat:rejected
+no-food:rejected
+malformed:rejected
+array:rejected
+trailing:rejected

@@ -5,6 +5,7 @@
      - exports/ : GPX/FIT workout route export (RouteExportShare)
      - recaps/  : weekly-recap PNG share (RecapShare) -->
 <paths>
+    <cache-path name="nutrition" path="nutrition/" />
     <cache-path name="logs" path="logs/" />
     <cache-path name="reports" path="reports/" />
     <cache-path name="exports" path="exports/" />

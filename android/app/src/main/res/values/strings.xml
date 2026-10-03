@@ -2885,4 +2885,31 @@
     <string name="raw_diag_ecg_probe_start">Start ECG capture</string>
     <string name="raw_diag_ecg_probe_stop">Stop ECG capture</string>
     <string name="raw_diag_ecg_probe_running">A capture may still be running on this strap. The verdict goes to the strap log.</string>
+    <string name="nav_nutrition">Nutrition</string>
+    <string name="nutrition_subtitle">Your meals, photos, and daily nutrition</string>
+    <string name="nutrition_macro_totals">Protein %1$.1f g · Carbs %2$.1f g · Fat %3$.1f g</string>
+    <string name="nutrition_log_meal">Log a meal</string>
+    <string name="nutrition_empty">No meals logged for this day. Add a photo or enter a meal manually.</string>
+    <string name="nutrition_reviewed">AI estimate · %1$s · Reviewed by you</string>
+    <string name="nutrition_edit">Edit</string>
+    <string name="nutrition_delete">Delete</string>
+    <string name="nutrition_local_notice">Photo estimates can miss ingredients and serving sizes. Review before saving. Meals stay on this device; they are separate from nutrition CSV imports and are not included in NOOP backups yet.</string>
+    <string name="nutrition_delete_confirm">Delete this meal and its photo?</string>
+    <string name="nutrition_cancel">Cancel</string>
+    <string name="nutrition_retry">Retry</string>
+    <string name="nutrition_choose_photo">Choose photo</string>
+    <string name="nutrition_take_photo">Take photo</string>
+    <string name="nutrition_send_notice">Analyze sends this photo and your meal notes to %1$s using %2$s. Choose a vision-capable model in Coach settings. No strap data is sent.</string>
+    <string name="nutrition_analyze">Analyze photo</string>
+    <string name="nutrition_food">Food</string>
+    <string name="nutrition_portion">Portion / foods</string>
+    <string name="nutrition_notes">Meal notes / assumptions</string>
+    <string name="nutrition_calories">Calories (kcal)</string>
+    <string name="nutrition_protein">Protein (g)</string>
+    <string name="nutrition_carbs">Carbs (g)</string>
+    <string name="nutrition_fat">Fat (g)</string>
+    <string name="nutrition_eaten_at">Eaten at %1$s</string>
+    <string name="nutrition_estimate_notice">Estimates are approximate. Correct the foods, portion, calories, and macros before saving.</string>
+    <string name="nutrition_save">Save</string>
+    <string name="nutrition_kcal" translatable="false">%1$.0f kcal</string>
 </resources>
