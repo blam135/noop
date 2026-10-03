@@ -2437,4 +2437,38 @@
     <string name="workout_delete_message">Isto interrompe a gravação e elimina permanentemente o treino.</string>
     <string name="l10n_settings_screen_effort_exponential_scale">Esforço: escala de intensidade exponencial</string>
     <string name="l10n_settings_screen_effort_exponential_scale_desc">Pontua o Esforço numa curva de intensidade exponencial (TRIMP de Banister) em vez das zonas de frequência cardíaca predefinidas (Edwards). A predefinição não conta nada abaixo de metade da tua reserva de frequência cardíaca, por isso uma hora de musculação — em que as séries duras se compensam com os descansos — pode pontuar quase zero. A curva exponencial não tem limiar e pondera muito mais os esforços curtos e intensos. Volta a pontuar o teu histórico e ambas as escalas atingem o mesmo máximo. Desativado por predefinição.</string>
+
+    <!-- On-device running hub and measured GPS analysis. -->
+    <string name="runs_title">Corridas</string>
+    <string name="runs_subtitle">Os seus percursos, ritmo e progresso.</string>
+    <string name="runs_close">Fechar</string>
+    <string name="runs_start">Iniciar corrida</string>
+    <string name="runs_open_workout">Abrir treino ativo</string>
+    <string name="runs_range_days">%1$d dias</string>
+    <string name="runs_count">Corridas</string>
+    <string name="runs_total_distance">Distância total</string>
+    <string name="runs_active_time">Tempo ativo</string>
+    <string name="runs_average_pace">Ritmo médio</string>
+    <string name="runs_longest">Corrida mais longa</string>
+    <string name="runs_summary_note">Distância registada e tempo ativo. O ritmo usa o tempo GPS medido quando disponível.</string>
+    <string name="runs_empty">Sem corridas neste período. Inicie uma corrida ou escolha um intervalo maior.</string>
+    <string name="runs_weekly_distance">Distância semanal</string>
+    <string name="runs_week_start">Semana de %1$s</string>
+    <string name="runs_recent">Corridas recentes</string>
+    <string name="runs_show_more">Mostrar mais</string>
+    <string name="runs_route">Percurso registado</string>
+    <string name="runs_coordinates">Localização: %1$s</string>
+    <string name="runs_offline_route">Traçado e coordenadas offline. Não requer mapas de ruas.</string>
+    <string name="runs_splits">Parciais</string>
+    <string name="runs_split">Parcial</string>
+    <string name="runs_partial_split">%1$d · incompleto</string>
+    <string name="runs_splits_note">O ritmo dos parciais usa o tempo GPS desde a primeira posição aceite e exclui pausas. Um parcial incompleto é a distância restante.</string>
+    <string name="runs_splits_unavailable">Os tempos parciais não estão disponíveis para esta corrida. Novos registos GPS guardam amostras com tempo.</string>
+    <string name="runs_location_paused">Registo de localização em pausa</string>
+    <string name="runs_location_denied">Permissão de localização recusada. O tempo é registado sem percurso.</string>
+    <string name="runs_location_unavailable">Localização indisponível. Verifique a permissão e as definições de GPS.</string>
+    <string name="runs_location_waiting">A aguardar uma posição GPS precisa…</string>
+    <string name="runs_location_recording">A registar percurso GPS</string>
+    <string name="runs_export_gap_note">As pausas e interrupções são preservadas como segmentos GPX separados.</string>
+    <string name="runs_pace_chart_unit">min/%1$s</string>
 </resources>

@@ -59,6 +59,14 @@ class ActiveWorkoutPersistenceTest {
         assertEquals(original.pausedDurationMs, decoded.pausedDurationMs)
     }
 
+    @Test fun deniedGpsRunRestoresItsRequestedLocationState() {
+        val original = snapshot(sportName = "Running", samples = emptyList()).copy(gpsRequested = true)
+        val decoded = ActiveWorkoutPersistence.decode(ActiveWorkoutPersistence.encode(original))!!
+        assertEquals(original, decoded)
+        assertTrue(decoded.gpsRequested)
+        assertTrue(decoded.samples.isEmpty())
+    }
+
     @Test
     fun roundTrip_withNoSamples() {
         // A session that started but hasn't captured a sample yet (strap not streaming) must still

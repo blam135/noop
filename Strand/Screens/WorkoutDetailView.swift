@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 import StrandDesign
 import StrandAnalytics
 import StrandImport
@@ -55,6 +56,8 @@ struct WorkoutDetailView: View {
     /// The GPS route captured for this session on-device (#524), if any. Decoded from `RouteStore` by the
     /// row's natural key. nil = no route was recorded (honest — the map only shows when points exist).
     @State private var route: [RouteMath.LatLng] = []
+    @State private var routeSamples: [RunAnalysis.Sample] = []
+    @State private var routeSegmentStartIndices: [Int] = []
 
     /// Drives the GPX/FIT export chooser for the recorded route.
     @State private var showRouteExport = false
@@ -81,6 +84,7 @@ struct WorkoutDetailView: View {
             headerCard
             statStrip
             routeCard
+            runSplitsCard
             hrCurveCard
             zonesCard
             heartRateRecoveryCard
@@ -103,11 +107,8 @@ struct WorkoutDetailView: View {
         // #524: the GPS route, if this session recorded one on-device. A cheap UserDefaults read keyed
         // by the row's natural key (startTs + sport); decoded to points only when ≥2 were captured so the
         // map only ever draws a real route.
-        let routePoints: [RouteMath.LatLng] = {
-            guard let r = RouteStore.load(startTs: row.startTs, sport: row.sport) else { return [] }
-            let pts = RouteMath.decode(r.polyline)
-            return pts.count >= 2 ? pts : []
-        }()
+        let savedRoute = RouteStore.load(startTs: row.startTs, sport: row.sport)
+        let routePoints = savedRoute.map { RouteMath.decode($0.polyline) } ?? []
 
         // HR curve over the exact session window — a finer bucket than the 24h chart so a short run
         // still reads as a curve, not a handful of points.
@@ -154,6 +155,8 @@ struct WorkoutDetailView: View {
 
         await MainActor.run {
             self.route = routePoints
+            self.routeSamples = savedRoute?.samples ?? []
+            self.routeSegmentStartIndices = savedRoute?.segmentStartIndices ?? []
             self.hrPoints = points
             self.zoneMinutes = minutes
             self.zonesFromImport = fromImport
@@ -274,6 +277,72 @@ struct WorkoutDetailView: View {
 
     // MARK: - GPS route (#524)
 
+    @ViewBuilder private var runSplitsCard: some View {
+        if RunAnalysis.isRunningSport(row.sport), loaded {
+            let splits = RunAnalysis.splits(routeSamples, unitMeters: unitSystem == .imperial ? 1609.344 : 1000)
+            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+                SectionHeader("Run analysis", overline: "From GPS fixes")
+                if splits.isEmpty {
+                    NoopCard {
+                        Text("Timed GPS samples are unavailable for this run. New recorded runs include pace and splits.")
+                            .font(StrandFont.subhead)
+                            .foregroundStyle(StrandPalette.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    NoopCard(tint: StrandPalette.effortColor) {
+                        VStack(alignment: .leading, spacing: NoopMetrics.space4) {
+                            Text("Pace by split").font(StrandFont.subhead)
+                            Chart(splits) { split in
+                                LineMark(x: .value("Split", split.index),
+                                         y: .value("Pace", split.paceSecPerKm * paceUnitFactor / 60))
+                                    .foregroundStyle(StrandPalette.effortColor)
+                                PointMark(x: .value("Split", split.index),
+                                          y: .value("Pace", split.paceSecPerKm * paceUnitFactor / 60))
+                                    .foregroundStyle(StrandPalette.effortBright)
+                            }
+                            .chartYAxisLabel(unitSystem == .imperial ? String(localized: "min/mi") : String(localized: "min/km"))
+                            .chartXAxisLabel(String(localized: "Split"))
+                            .frame(height: NoopMetrics.chartHeight)
+                            .accessibilityLabel(Text("Pace across your recorded run splits"))
+                            HStack {
+                                Text("Split").frame(maxWidth: .infinity, alignment: .leading)
+                                Text("Distance").frame(maxWidth: .infinity, alignment: .trailing)
+                                Text("Time").frame(maxWidth: .infinity, alignment: .trailing)
+                                Text("Pace").frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                            .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
+                            ForEach(splits) { split in
+                                HStack {
+                                    Text(split.isPartial ? String(localized: "\(split.index) · partial") : "\(split.index)")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Text(UnitFormatter.distanceFromMeters(split.distanceM, system: unitSystem))
+                                        .frame(maxWidth: .infinity, alignment: .trailing)
+                                    Text(splitDuration(split.durationS))
+                                        .frame(maxWidth: .infinity, alignment: .trailing)
+                                    Text(UnitFormatter.paceFromSecPerKm(split.paceSecPerKm, system: unitSystem))
+                                        .frame(maxWidth: .infinity, alignment: .trailing)
+                                }
+                                .font(StrandFont.footnote).monospacedDigit()
+                                .foregroundStyle(StrandPalette.textPrimary)
+                            }
+                            Text("Splits use accepted GPS fixes from the first fix, with pauses excluded. A partial split covers the final shorter distance. Recording gaps may reduce measured distance.")
+                                .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var paceUnitFactor: Double { unitSystem == .imperial ? 1.609344 : 1 }
+
+    private func splitDuration(_ seconds: Double) -> String {
+        let seconds = max(0, Int(seconds.rounded()))
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
     /// The captured-route card: a MapKit map of the polyline with start/end markers, plus distance and
     /// pace read off the route. Shown ONLY when ≥2 points were captured — honest "no map" otherwise (a
     /// Mac with no GPS, denied permission, or a non-distance sport never produce a route).
@@ -284,7 +353,7 @@ struct WorkoutDetailView: View {
                               trailing: distanceLabel(row.distanceM))
                 NoopCard(padding: 0, tint: StrandPalette.effortColor) {
                     VStack(alignment: .leading, spacing: 0) {
-                        WorkoutRouteMap(points: route)
+                        WorkoutRouteMap(points: route, segmentStartIndices: routeSegmentStartIndices)
                             .frame(height: 220)
                             .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius,
                                                         style: .continuous))
@@ -311,7 +380,9 @@ struct WorkoutDetailView: View {
                 .buttonStyle(NoopButtonStyle(.secondary, fullWidth: true))
                 .confirmationDialog("Export route", isPresented: $showRouteExport, titleVisibility: .visible) {
                     Button("GPX — Strava, Garmin, most apps") { exportRoute(.gpx) }
-                    Button("FIT — Garmin Connect") { exportRoute(.fit) }
+                    if routeSegmentStartIndices.isEmpty {
+                        Button("FIT — Garmin Connect") { exportRoute(.fit) }
+                    }
                     Button("Cancel", role: .cancel) {}
                 } message: {
                     Text("Save this route as a standard file you can import into Strava, Garmin Connect, and other apps.")
@@ -323,6 +394,7 @@ struct WorkoutDetailView: View {
     /// Write the route to a GPX/FIT file and hand it to the system share sheet (or a Save panel on macOS).
     /// Points are decoded lat/lon only (the stored polyline), so the exporter interpolates per-point times
     /// across the session window and carries the workout's summary (sport, distance, calories, HR).
+    /// GPX preserves separate segments across recording gaps; FIT is offered only for continuous routes.
     ///
     /// The build + disk write run OFF the main actor (a long route is a non-trivial encode, and blocking
     /// file IO must never stall the UI); only the share-sheet present hops back to the main actor.
@@ -333,10 +405,12 @@ struct WorkoutDetailView: View {
         let name = "noop-route-\(row.startTs).\(format.ext)"
         let startTs = row.startTs, endTs = row.endTs, sport = row.sport
         let distanceM = row.distanceM, energyKcal = row.energyKcal, avgHr = row.avgHr, maxHr = row.maxHr
+        let segmentStarts = routeSegmentStartIndices
         Task.detached(priority: .userInitiated) {
             let data = RouteExporter.render(
                 format, route: points, startTs: startTs, endTs: endTs, sport: sport,
-                distanceM: distanceM, energyKcal: energyKcal, avgHr: avgHr, maxHr: maxHr)
+                distanceM: distanceM, energyKcal: energyKcal, avgHr: avgHr, maxHr: maxHr,
+                segmentStartIndices: segmentStarts)
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
             do { try data.write(to: url) } catch { return }
             await MainActor.run { FileExport.exportFile(at: url, suggestedName: name) }
@@ -357,6 +431,9 @@ struct WorkoutDetailView: View {
     /// Avg pace from the row's GPS distance + duration, in the user's unit system: "m:ss /km" (metric) or
     /// "m:ss /mi" (imperial). "–" when distance or duration is missing/zero (pace undefined — honest).
     private var paceLabel: String {
+        if let last = routeSamples.last, last.distanceM > 0, last.elapsedS > 0 {
+            return UnitFormatter.paceFromSecPerKm(last.elapsedS / (last.distanceM / 1000), system: unitSystem)
+        }
         guard let m = row.distanceM, m > 0 else { return "–" }
         let secs = row.durationS ?? Double(row.endTs - row.startTs)
         guard secs > 0 else { return "–" }
@@ -633,6 +710,8 @@ typealias RouteMapRepresentable = NSViewRepresentable
 #if canImport(MapKit)
 struct WorkoutRouteMap: RouteMapRepresentable {
     let points: [RouteMath.LatLng]
+    var showsCurrentLocation = false
+    var segmentStartIndices: [Int] = []
 
     private var coordinates: [CLLocationCoordinate2D] {
         points.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
@@ -656,12 +735,26 @@ struct WorkoutRouteMap: RouteMapRepresentable {
         map.removeOverlays(map.overlays)
         map.removeAnnotations(map.annotations)
         let coords = coordinates
-        guard coords.count >= 2 else { return }
+        guard let first = coords.first, let last = coords.last else { return }
+        if coords.count == 1 {
+            let current = MKPointAnnotation(); current.coordinate = first
+            current.title = String(localized: "Current location")
+            map.addAnnotation(current)
+            map.setRegion(MKCoordinateRegion(center: first, latitudinalMeters: 500, longitudinalMeters: 500), animated: false)
+            return
+        }
         let line = MKPolyline(coordinates: coords, count: coords.count)
-        map.addOverlay(line)
+        let starts = Array(Set([0] + segmentStartIndices.filter { $0 > 0 && $0 < coords.count })).sorted()
+        for (index, start) in starts.enumerated() {
+            let end = index + 1 < starts.count ? starts[index + 1] : coords.count
+            guard end - start >= 2 else { continue }
+            let segment = Array(coords[start..<end])
+            map.addOverlay(MKPolyline(coordinates: segment, count: segment.count))
+        }
 
-        let start = MKPointAnnotation(); start.coordinate = coords.first!; start.title = String(localized: "Start")
-        let end = MKPointAnnotation(); end.coordinate = coords.last!; end.title = String(localized: "Finish")
+        let start = MKPointAnnotation(); start.coordinate = first; start.title = String(localized: "Start")
+        let end = MKPointAnnotation(); end.coordinate = last
+        end.title = showsCurrentLocation ? String(localized: "Current location") : String(localized: "Finish")
         map.addAnnotations([start, end])
 
         // Frame the whole route with a little padding so the line isn't flush to the edges.
@@ -708,6 +801,8 @@ private enum RoutePlatformColor {
 /// Platforms without MapKit (none we ship, but keeps the type resolvable): no route map.
 struct WorkoutRouteMap: View {
     let points: [RouteMath.LatLng]
+    var showsCurrentLocation = false
+    var segmentStartIndices: [Int] = []
     var body: some View { Color.clear }
 }
 #endif

@@ -55,7 +55,8 @@ struct LiveWorkoutView: View {
                     // Live GPS distance + pace (#1195) — a self-gating leaf owning its own recorder
                     // observation, so a GPS fix re-renders only this card. Renders nothing until the first
                     // accepted fix, so non-GPS / denied sessions leave the stack unchanged.
-                    AnyView(DistancePaceRowIfPresent(recorder: model.gpsRecorder)),
+                    AnyView(DistancePaceRowIfPresent(recorder: model.gpsRecorder,
+                        isGpsWorkout: WorkoutCatalog.sport(named: activeSportName)?.isDistanceSport ?? false)),
                 ]
                 ForEach(Array(cards.enumerated()), id: \.offset) { index, card in
                     card.staggeredAppear(index: index)
@@ -524,27 +525,75 @@ private struct SensorRowIfPresent: View {
 /// gated distance/pace row in `LiveWorkoutScreen`.
 private struct DistancePaceRowIfPresent: View {
     @ObservedObject var recorder: GpsWorkoutRecorder
+    let isGpsWorkout: Bool
     @AppStorage(UnitPrefs.systemKey) private var unitSystemRaw = UnitSystem.metric.rawValue
     private var unitSystem: UnitSystem { UnitSystem(rawValue: unitSystemRaw) ?? .metric }
 
     var body: some View {
-        // `isRecording` is essential, not just `pointCount > 0`: the recorder is a single long-lived
-        // object and `stop()` leaves `pointCount`/`distanceM` intact (only `start()` resets them, and it
-        // runs solely for distance sports). Without the `isRecording` guard a non-GPS workout started
-        // after a GPS one would show the previous session's stale distance. Together they mean "a GPS
-        // recording is live AND has at least one accepted fix" — the Android `gpsEnabled && track` twin.
-        if recorder.isRecording, recorder.pointCount > 0 {
+        // Sport gating prevents a subsequent indoor workout from showing the previous route while
+        // retaining the current route throughout a pause.
+        if isGpsWorkout {
             NoopCard(padding: NoopMetrics.cardInnerPadding, tint: StrandPalette.effortColor) {
-                HStack(spacing: 0) {
-                    // "Distance"/"Pace" are already localized (reused from the detail view); uppercased for
-                    // the caps stat grid, exactly as the detail route stats do.
-                    stat(String(localized: "Distance").uppercased(),
-                         UnitFormatter.distanceFromMeters(recorder.distanceM, system: unitSystem))
-                    statDivider
-                    stat(String(localized: "Pace").uppercased(),
-                         UnitFormatter.paceFromSecPerKm(recorder.paceSecPerKm, system: unitSystem))
+                VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                    HStack {
+                        Label("Live route", systemImage: "location.fill")
+                            .font(StrandFont.subhead)
+                        Spacer(minLength: 0)
+                        Text(statusLabel)
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                    }
+                    if !recorder.routePoints.isEmpty {
+                        WorkoutRouteMap(points: recorder.routePoints,
+                                        showsCurrentLocation: true,
+                                        segmentStartIndices: recorder.routeSegmentStartIndices)
+                            .frame(height: NoopMetrics.chartHeight)
+                            .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+                            .accessibilityLabel(Text("Your recorded route and current location"))
+                        HStack(spacing: 0) {
+                            stat(String(localized: "Distance").uppercased(),
+                                 UnitFormatter.distanceFromMeters(recorder.distanceM, system: unitSystem))
+                            statDivider
+                            stat(String(localized: "Pace").uppercased(),
+                                 UnitFormatter.paceFromSecPerKm(recorder.paceSecPerKm, system: unitSystem))
+                        }
+                        if let accuracy = recorder.accuracyM {
+                            Text("GPS accuracy: \(Int(accuracy.rounded())) m")
+                                .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                        }
+                        if let position = recorder.routePoints.last {
+                            Text(verbatim: RouteMath.coordinatesLabel(position))
+                                .font(StrandFont.captionNumber)
+                                .foregroundStyle(StrandPalette.textSecondary)
+                                .accessibilityLabel("Current location")
+                        }
+                    }
+                    Text(statusNote)
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+    }
+
+    private var statusLabel: String {
+        switch recorder.status {
+        case .waiting: return String(localized: "Waiting for GPS")
+        case .recording: return String(localized: "GPS recording")
+        case .paused: return String(localized: "Paused")
+        case .denied: return String(localized: "Location permission needed")
+        case .unavailable: return String(localized: "GPS unavailable")
+        }
+    }
+
+    private var statusNote: String {
+        switch recorder.status {
+        case .waiting: return String(localized: "Move outdoors and wait for a GPS fix. Your workout timer is running.")
+        case .recording: return String(localized: "Pace and splits are timed from your first GPS fix, with pauses excluded.")
+        case .paused: return String(localized: "Your route is kept while paused. Resume to continue recording.")
+        case .denied: return String(localized: "Allow NOOP to use your location in system Settings to record a route.")
+        case .unavailable: return String(localized: "Location is unavailable. Move outdoors or enable location services; your workout continues.")
         }
     }
 

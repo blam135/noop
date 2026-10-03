@@ -15,24 +15,29 @@ import com.noop.analytics.RouteMath
 
 /** Draws a GPS route as a polyline on a blank canvas — no map tiles, fully offline. */
 @Composable
-fun RouteCanvas(polyline: String, modifier: Modifier = Modifier) {
+fun RouteCanvas(polyline: String, modifier: Modifier = Modifier, segmentStartIndices: List<Int> = emptyList()) {
     // PERF (#scroll-jank): the polyline decode ran every recomposition and the normalize + Path build ran
     // every frame. remember() the decode (keyed on the polyline) and hoist the normalize + Path into
     // drawWithCache (keyed on the points + the implicit size) so they tessellate ONCE and replay on scroll.
     // Pixel-identical: same normalizeToBox geometry, same stroke + endpoint markers.
-    val points = remember(polyline) { RouteMath.decode(polyline) }
+    val points = remember(polyline) { runCatching { RouteMath.decode(polyline) }.getOrDefault(emptyList()) }
+    val breaks = remember(segmentStartIndices) { segmentStartIndices.toSet() }
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(180.dp)
             .drawWithCache {
                 val screen = RouteMath.normalizeToBox(points, size.width, size.height)
-                if (screen.size < 2) {
+                if (points.size == 1) {
+                    onDrawBehind { drawCircle(Palette.accent, radius = Metrics.space8.toPx(), center = center) }
+                } else if (screen.size < 2) {
                     onDrawBehind { }
                 } else {
                     val path = Path().apply {
                         moveTo(screen.first().first, screen.first().second)
-                        screen.drop(1).forEach { (x, y) -> lineTo(x, y) }
+                        screen.drop(1).forEachIndexed { index, (x, y) ->
+                            if (index + 1 in breaks) moveTo(x, y) else lineTo(x, y)
+                        }
                     }
                     val stroke = Stroke(width = 6f)
                     val start = Offset(screen.first().first, screen.first().second)

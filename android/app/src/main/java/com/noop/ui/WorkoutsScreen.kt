@@ -1,6 +1,8 @@
 package com.noop.ui
 
 import com.noop.R
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -171,6 +173,7 @@ fun WorkoutsScreen(vm: AppViewModel) {
 
     // The manual add/edit dialog target: Some(null) = add, Some(row) = edit, null = closed.
     var dialog by remember { mutableStateOf<DialogTarget?>(null) }
+    var showRuns by remember { mutableStateOf(false) }
 
     // #64: filters beyond the time range — sport (null = all), source class (null = all), free-text
     // search over the displayed sport. The pure WorkoutFilter applies them AFTER the window cut.
@@ -276,6 +279,10 @@ fun WorkoutsScreen(vm: AppViewModel) {
         item {
         WorkoutStartSection(vm, onAdd = { dialog = DialogTarget(null) })
         }
+        item {
+            NoopButton(text = uiString(R.string.runs_title), leadingIcon = Icons.AutoMirrored.Filled.DirectionsRun,
+                kind = NoopButtonKind.Secondary, modifier = Modifier.fillMaxWidth(), onClick = { showRuns = true })
+        }
 
         if (allRows.isEmpty()) {
             item {
@@ -380,6 +387,11 @@ fun WorkoutsScreen(vm: AppViewModel) {
                 dialog = null
             },
         )
+    }
+    if (showRuns) {
+        Dialog(onDismissRequest = { showRuns = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            RunsScreen(vm) { showRuns = false }
+        }
     }
 }
 
@@ -1454,8 +1466,17 @@ private fun SessionRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WorkoutDetailSheet(vm: AppViewModel, row: WorkoutRow, onDismiss: () -> Unit) {
+internal fun WorkoutDetailSheet(vm: AppViewModel, row: WorkoutRow, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val detailContext = LocalContext.current
+    var routeCompanion by remember(row.startTs, row.sport) { mutableStateOf<com.noop.location.RunTrackStore.Track?>(null) }
+    var routeLoaded by remember(row.startTs, row.sport) { mutableStateOf(false) }
+    LaunchedEffect(row.startTs, row.sport) {
+        routeCompanion = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.noop.location.RunTrackStore(detailContext.applicationContext).load(row.startTs, row.sport)
+        }
+        routeLoaded = true
+    }
 
     // Per-window reads (#410): the HR curve (downsampled bucket means) and the HR-zone split. Zones
     // prefer the imported per-workout percentages (a WHOOP-computed split); only when the row carries
@@ -1526,14 +1547,16 @@ private fun WorkoutDetailSheet(vm: AppViewModel, row: WorkoutRow, onDismiss: () 
             }
             steps?.let { DetailRow("Steps", "${grouped(it.toDouble())} steps") }  // #398, on-foot sports
             if (!row.notes.isNullOrBlank()) DetailRow("Notes", row.notes)
+            if (com.noop.analytics.RunAnalysis.isRunningSport(row.sport)) RunDetailAnalysis(row)
 
             // Export the recorded GPS route as a GPX/FIT file (Strava / Garmin Connect / any GPS app).
             // Only when a route with a drawable path was recorded; the file is built on-device and shared.
-            row.routePolyline?.let { poly ->
-                val track = remember(poly) { RouteMath.decode(poly) }
+            (row.routePolyline ?: routeCompanion?.polyline)?.let { poly ->
+                val track = remember(poly) { runCatching { RouteMath.decode(poly) }.getOrDefault(emptyList()) }
                 if (track.size >= 2) {
                     val exportCtx = LocalContext.current
                     val exportScope = rememberCoroutineScope()
+                    val segmentStarts = routeCompanion?.segmentStartIndices ?: emptyList()
                     CardDivider()
                     Text("Export route", style = NoopType.subhead, color = Palette.textPrimary)
                     Text(
@@ -1542,19 +1565,22 @@ private fun WorkoutDetailSheet(vm: AppViewModel, row: WorkoutRow, onDismiss: () 
                         style = NoopType.footnote,
                         color = Palette.textTertiary,
                     )
+                    if (segmentStarts.isNotEmpty()) Text(uiString(R.string.runs_export_gap_note), style = NoopType.footnote, color = Palette.textTertiary)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         NoopButton(
                             text = "GPX",
+                            enabled = routeLoaded,
                             kind = NoopButtonKind.Secondary,
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 exportScope.launch {
-                                    RouteExportShare.share(exportCtx, RouteExport.Format.GPX, track, row)
+                                    RouteExportShare.share(exportCtx, RouteExport.Format.GPX, track, row, segmentStarts)
                                 }
                             },
                         )
-                        NoopButton(
+                        if (segmentStarts.isEmpty()) NoopButton(
                             text = "FIT",
+                            enabled = routeLoaded,
                             kind = NoopButtonKind.Secondary,
                             modifier = Modifier.weight(1f),
                             onClick = {
@@ -2295,7 +2321,7 @@ private fun workoutFieldColors() = OutlinedTextFieldDefaults.colors(
 // MARK: - Dividers
 
 @Composable
-private fun CardDivider() {
+internal fun CardDivider() {
     Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Palette.hairline))
 }
 

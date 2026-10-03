@@ -46,9 +46,13 @@ object RouteExport {
         energyKcal: Double? = null,
         avgHr: Int? = null,
         maxHr: Int? = null,
+        segmentStartIndices: List<Int> = emptyList(),
     ): ByteArray = when (format) {
-        Format.GPX -> buildGpx(points, startTs, endTs, sport, distanceM).toByteArray(Charsets.UTF_8)
-        Format.FIT -> buildFit(points, startTs, endTs, sport, distanceM, energyKcal, avgHr, maxHr)
+        Format.GPX -> buildGpx(points, startTs, endTs, sport, distanceM, segmentStartIndices).toByteArray(Charsets.UTF_8)
+        Format.FIT -> {
+            if (segmentStartIndices.any { it in 1 until points.size }) ByteArray(0)
+            else buildFit(points, startTs, endTs, sport, distanceM, energyKcal, avgHr, maxHr)
+        }
     }
 
     /** GPX 1.1 track. Each `trkpt` carries lat/lon + an interpolated `time`; no `ele`/HR (none stored). */
@@ -58,6 +62,7 @@ object RouteExport {
         endTs: Long,
         sport: String?,
         distanceM: Double? = null,
+        segmentStartIndices: List<Int> = emptyList(),
     ): String {
         val canon = canonicalSport(sport)
         val times = interpolatedTimes(points.size, startTs, endTs)
@@ -70,7 +75,9 @@ object RouteExport {
         sb.append("    <name>").append(xmlEscape(displaySport(canon))).append("</name>\n")
         sb.append("    <type>").append(xmlEscape(canon)).append("</type>\n")
         sb.append("    <trkseg>\n")
+        val breaks = segmentStartIndices.toSet()
         for (i in points.indices) {
+            if (i > 0 && i in breaks) sb.append("    </trkseg>\n    <trkseg>\n")
             val p = points[i]
             sb.append("      <trkpt lat=\"").append(coord(p.lat)).append("\" lon=\"").append(coord(p.lon))
                 .append("\"><time>").append(iso(times[i])).append("</time></trkpt>\n")

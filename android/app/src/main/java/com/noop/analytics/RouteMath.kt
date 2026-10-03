@@ -13,6 +13,10 @@ import kotlin.math.sqrt
 object RouteMath {
     data class LatLng(val lat: Double, val lon: Double)
 
+    /** Coordinates use a stable decimal representation beside the offline route trace. */
+    fun formatCoordinates(point: LatLng): String =
+        String.format(java.util.Locale.US, "%.5f, %.5f", point.lat, point.lon)
+
     private const val EARTH_R = 6_371_000.0 // metres
 
     fun haversineMeters(a: LatLng, b: LatLng): Double {

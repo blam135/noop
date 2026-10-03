@@ -100,15 +100,15 @@ fun rememberRequestAdvertise(onGranted: () -> Unit): () -> Unit {
 fun rememberRequestLocation(onResult: (granted: Boolean) -> Unit): () -> Unit {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> onResult(granted) }
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants -> onResult(grants[Manifest.permission.ACCESS_FINE_LOCATION] == true) }
     return {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED
         ) {
             onResult(true)
         } else {
-            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
     }
 }

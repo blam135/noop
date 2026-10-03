@@ -1276,6 +1276,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val startMs: Long,
         val sport: Sport,
         val gpsEnabled: Boolean,
+        val gpsRequested: Boolean = gpsEnabled,
         val samples: List<HrSample> = emptyList(),
         val track: List<RouteMath.LatLng> = emptyList(),
         val distanceM: Double = 0.0,
@@ -1335,11 +1336,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Begin a workout for [sport]; start GPS route tracking when [gpsEnabled]. Single buzz confirms. */
-    fun startWorkout(sport: Sport = WorkoutSport.default, gpsEnabled: Boolean = false) {
+    fun startWorkout(sport: Sport = WorkoutSport.default, gpsEnabled: Boolean = false, gpsRequested: Boolean = gpsEnabled) {
         if (_activeWorkout.value != null) return
         _lastWorkout.value = null
         val startMs = System.currentTimeMillis()
-        _activeWorkout.value = ActiveWorkout(startMs = startMs, sport = sport, gpsEnabled = gpsEnabled)
+        _activeWorkout.value = ActiveWorkout(startMs = startMs, sport = sport, gpsEnabled = gpsEnabled, gpsRequested = gpsRequested)
         buzz(1, HapticPrefs.WORKOUT)
         // Workouts & GPS test mode (Test Centre): one session-start line tagged .workouts. Zero-cost when off.
         emitWorkoutsTrace {
@@ -1378,6 +1379,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     liveStrain = w.liveStrain,
                     pausedAtMs = w.pausedAtMs,
                     pausedDurationMs = w.pausedDurationMs,
+                    gpsRequested = w.gpsRequested,
                 ),
             )
         }
@@ -1390,7 +1392,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gpsJob = viewModelScope.launch {
             GpsSession.state.collect { s ->
                 val w = _activeWorkout.value ?: return@collect
-                _activeWorkout.value = w.copy(track = s.track, distanceM = s.distanceM, paceSecPerKm = s.paceSecPerKm)
+                if (w.gpsEnabled && s.active) _activeWorkout.value = w.copy(track = s.track,
+                    distanceM = s.distanceM, paceSecPerKm = s.paceSecPerKm,
+                    pausedAtMs = s.pausedAtMs, pausedDurationMs = s.pausedDurationMs)
             }
         }
     }
@@ -1411,6 +1415,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             pausedAtMs = s.pausedAtMs, pausedDurationMs = s.pausedDurationMs,
         )
         observeGpsSession()
+        // Re-start GPS collection from foreground UI after process death. The checkpoint is restored
+        // without a distance bridge; platform permission/provider failures remain visible in live UI.
+        if (!s.paused) WhoopConnectionService.start(appContext)
     }
 
     /**
@@ -1429,6 +1436,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             startMs = snap.startMs, sport = sport, gpsEnabled = false,
             samples = snap.samples, avgHr = snap.avgHr, peakHr = snap.peakHr, liveStrain = snap.liveStrain,
             pausedAtMs = snap.pausedAtMs, pausedDurationMs = snap.pausedDurationMs,
+            gpsRequested = snap.gpsRequested,
         )
     }
 
@@ -1436,10 +1444,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val w = _activeWorkout.value ?: return
         val now = System.currentTimeMillis()
         val updated = if (w.pausedAtMs == null) {
-            if (w.gpsEnabled) GpsSession.pause()
+            if (w.gpsEnabled) GpsSession.pause(now)
             w.copy(pausedAtMs = now)
         } else {
-            if (w.gpsEnabled) GpsSession.resume()
+            if (w.gpsEnabled) {
+                GpsSession.resume(now)
+                WhoopConnectionService.start(appContext)
+            }
             w.copy(pausedAtMs = null, pausedDurationMs = w.pausedDurationMs + (now - w.pausedAtMs))
         }
         _activeWorkout.value = updated
@@ -1472,8 +1483,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // The process-level session is authoritative for the route: it kept accumulating even if this
         // ViewModel was cleared mid-ride (screen off), so [w.track] may be stale. Stop it and take its
         // final track. A non-GPS workout has nothing in the session, so fall back to the local track. (#215)
+        val gps = if (w.gpsEnabled) GpsSession.state.value else null
         val track = if (w.gpsEnabled) GpsSession.stop() else w.track
-        val distanceM = if (w.gpsEnabled) RouteMath.totalMeters(track) else w.distanceM
+        val distanceM = gps?.distanceM ?: w.distanceM
         // If we promoted the foreground service ONLY to keep GPS tracking alive (the user hasn't opted
         // into the background connection), drop it now the route is finished — otherwise a lingering
         // "Connected" notification would outlive the workout. With background-connection on, leave it
@@ -1482,7 +1494,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             WhoopConnectionService.stop(appContext)
         }
         val samples = w.samples
-        if (samples.size < 2 && track.size < 2) {
+        val endMs = System.currentTimeMillis()
+        val pausedMs = w.pausedDurationMs + (w.pausedAtMs?.let { endMs - it } ?: 0L)
+        val activeDurationMs = (endMs - w.startMs - pausedMs).coerceAtLeast(0L)
+        if (samples.size < 2 && track.size < 2 && !(w.gpsRequested && com.noop.analytics.RunAnalysis.isRunningSport(w.sport.name) && activeDurationMs >= 10_000)) {
             // Workouts & GPS test mode: record WHY a session vanished (too short / no track), tagged .workouts.
             emitWorkoutsTrace {
                 com.noop.analytics.WorkoutsTrace.sessionLine(
@@ -1493,9 +1508,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             _lastWorkout.value = null
             return
         }
-        val endMs = System.currentTimeMillis()
-        val pausedMs = w.pausedDurationMs + (w.pausedAtMs?.let { endMs - it } ?: 0L)
-        val activeDurationMs = (endMs - w.startMs - pausedMs).coerceAtLeast(0L)
         val avg = if (samples.isNotEmpty()) samples.sumOf { it.bpm } / samples.size else null
         val peak = if (samples.isNotEmpty()) samples.maxOf { it.bpm } else null
         // #983: score the SAVED workout with the wearer's measured resting HR, not the hardcoded
@@ -1525,7 +1537,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             energyKcal = energyKcal,
             avgHr = avg, maxHr = peak, strain = strain,
             distanceM = distanceM.takeIf { it > 0 },
-            routePolyline = if (track.size >= 2) RouteMath.encode(track) else null,
+            // A segmented route's geometry stays with its gap metadata. If that optional companion
+            // ages out, no flattened DB polyline can fabricate travel through the missing interval.
+            routePolyline = if (track.size >= 2 && gps?.segmentStartIndices.isNullOrEmpty()) RouteMath.encode(track) else null,
         )
         _lastWorkout.value = row
         // Workouts & GPS test mode: one session-end summary tagged .workouts (the lastSessionSummary readout
@@ -1541,6 +1555,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         buzz(2, HapticPrefs.WORKOUT)
         viewModelScope.launch {
             runCatching { repository.upsertWorkouts(listOf(row)) }
+            if (gps != null && gps.samples.isNotEmpty()) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.noop.location.RunTrackStore(appContext).save(row.startTs, row.sport, gps.samples,
+                    gps.segmentStartIndices, if (gps.segmentStartIndices.isNotEmpty() && track.size >= 2) RouteMath.encode(track) else null)
+            }
+            loadWorkouts()
             // #528: persist the live 1 Hz workout HR into hrSample so it can export to Health Connect
             // at full resolution NOW (the HR export keeps workout-window samples un-decimated), instead
             // of only after the next strap offload sync. IGNORE-on-conflict makes a later sync of the
@@ -1928,7 +1947,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Save a retroactive / edited manual workout, then reload. [replacing] is the original on edit. */
     fun saveManualWorkout(row: WorkoutRow, replacing: WorkoutRow? = null) {
         viewModelScope.launch {
-            runCatching { repository.saveManualWorkout(row, replacing) }
+            val saved = runCatching { repository.saveManualWorkout(row, replacing) }
+            if (saved.isSuccess && replacing != null) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.noop.location.RunTrackStore(appContext).rekey(
+                    com.noop.location.RunTrackStore.Key(replacing.startTs, replacing.sport),
+                    com.noop.location.RunTrackStore.Key(row.startTs, row.sport))
+            }
             // #598: rescore the just-added workout from the strap's HR for its window NOW, so its average /
             // peak HR, strain and calories appear immediately instead of waiting for the next analyze tick.
             // No-ops when there's no strap HR for the window; never overrides a value the user typed.
@@ -1954,7 +1978,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Re-label a detected bout to [sport] (becomes a durable manual session), then reload. */
     fun relabelDetected(row: WorkoutRow, sport: String) {
         viewModelScope.launch {
-            runCatching { repository.relabelDetected(row, sport) }
+            val saved = runCatching { repository.relabelDetected(row, sport) }
+            if (saved.isSuccess) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.noop.location.RunTrackStore(appContext).rekey(
+                    com.noop.location.RunTrackStore.Key(row.startTs, row.sport),
+                    com.noop.location.RunTrackStore.Key(row.startTs, sport))
+            }
             loadWorkouts()
         }
     }
@@ -1970,7 +1999,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Delete one workout (manual delete, or durable dismiss for a detected bout), then reload. */
     fun deleteWorkout(row: WorkoutRow) {
         viewModelScope.launch {
-            runCatching { repository.deleteWorkout(row) }
+            val deleted = runCatching { repository.deleteWorkout(row) }
+            if (deleted.isSuccess) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.noop.location.RunTrackStore(appContext).remove(com.noop.location.RunTrackStore.Key(row.startTs, row.sport))
+            }
             loadWorkouts()
             // #1195 follow-up: a workout removed in NOOP is removed from Health Connect too, so a session
             // we wrote (manual or live) doesn't linger there after the user deletes it here. Opt-in, keyed
@@ -1990,7 +2022,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!WorkoutMerge.canMerge(rows)) return
         val merged = WorkoutMerge.merge(rows, sport = sport, strapDeviceId = deviceId) ?: return
         viewModelScope.launch {
-            runCatching { repository.mergeWorkouts(rows, merged) }
+            val representative = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val store = com.noop.location.RunTrackStore(appContext)
+                rows.mapNotNull { row ->
+                    val companion = store.load(row.startTs, row.sport)
+                    val polyline = companion?.polyline ?: row.routePolyline ?: return@mapNotNull null
+                    row to com.noop.location.RunTrackStore.Track(emptyList(), companion?.segmentStartIndices ?: emptyList(), polyline)
+                }.maxByOrNull { (row, _) -> row.distanceM?.takeIf { it.isFinite() && it > 0 } ?: 0.0 }?.second
+            }
+            val finalMerged = if (representative != null) merged.copy(
+                routePolyline = representative.polyline.takeIf { representative.segmentStartIndices.isEmpty() }) else merged
+            val saved = runCatching { repository.mergeWorkouts(rows, finalMerged) }
+            if (saved.isSuccess) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.noop.location.RunTrackStore(appContext).consolidate(
+                    rows.map { com.noop.location.RunTrackStore.Key(it.startTs, it.sport) },
+                    com.noop.location.RunTrackStore.Key(finalMerged.startTs, finalMerged.sport), representative)
+            }
             // #598: rescore the merged row's strain from the strap's HR over its window now, so its Effort
             // appears immediately instead of waiting for the next analyze tick.
             rescoreAfterEdit()
@@ -2002,7 +2049,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      *  selectable, so a stray one is skipped by the repository. */
     fun bulkDeleteWorkouts(rows: List<WorkoutRow>) {
         viewModelScope.launch {
-            runCatching { repository.bulkDeleteWorkouts(rows) }
+            val deleted = runCatching { repository.bulkDeleteWorkouts(rows) }
+            if (deleted.isSuccess) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val store = com.noop.location.RunTrackStore(appContext)
+                rows.filter { it.source == "manual" || it.source == "detected" }.forEach {
+                    store.remove(com.noop.location.RunTrackStore.Key(it.startTs, it.sport))
+                }
+            }
             loadWorkouts()
         }
     }

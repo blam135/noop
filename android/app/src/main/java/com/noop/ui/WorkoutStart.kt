@@ -57,6 +57,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun StartWorkoutSheet(vm: AppViewModel, onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val live by vm.live.collectAsStateWithLifecycle()
+    val activeWorkout by vm.activeWorkout.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<Sport>(WorkoutSport.default) }
     var gpsOn by remember(selected) { mutableStateOf(selected.isDistanceSport) }
@@ -77,7 +79,7 @@ fun StartWorkoutSheet(vm: AppViewModel, onDismiss: () -> Unit) {
     // Workouts) that use this sheet get the live workout without each screen wiring it.
     var showLiveWorkout by remember { mutableStateOf(false) }
     val startWithGps = rememberRequestLocation { granted ->
-        vm.startWorkout(selected, gpsEnabled = gpsOn && granted)
+        vm.startWorkout(selected, gpsEnabled = gpsOn && granted, gpsRequested = gpsOn)
         showLiveWorkout = true
     }
 
@@ -132,7 +134,7 @@ fun StartWorkoutSheet(vm: AppViewModel, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            Button(onClick = {
+            Button(enabled = activeWorkout == null && (live.bonded || (gpsOn && selected.isDistanceSport)), onClick = {
                 // #297: a confirmed start is a real selection — fold it into the recents (recorded even
                 // if the GPS permission is then denied; the workout still starts route-less, #101).
                 RecentSportsPrefs.record(context, selected.name)
@@ -183,12 +185,11 @@ private fun StartSportRow(sp: Sport, isSelected: Boolean, onPick: () -> Unit) {
 /**
  * Start-a-workout entry for the Workouts screen (#115) — mirrors the Live screen's control so a user
  * can begin a session from either place. Shows a compact "running" banner while a workout is active
- * (the rich live card stays on Live); otherwise an action row with Start (when a strap is bonded, since
- * a live session needs the strap to stream) beside Add — or just Add when there's no strap.
+ * (the rich live card stays on Live); otherwise Start and Add are available together. The picker
+ * permits GPS distance activities without a strap and requires a strap for other live activities.
  */
 @Composable
 fun WorkoutStartSection(vm: AppViewModel, onAdd: () -> Unit) {
-    val live by vm.live.collectAsStateWithLifecycle()
     val activeWorkout by vm.activeWorkout.collectAsStateWithLifecycle()
     var showSportPicker by remember { mutableStateOf(false) }
     var confirmingEnd by remember { mutableStateOf(false) }
@@ -203,7 +204,8 @@ fun WorkoutStartSection(vm: AppViewModel, onAdd: () -> Unit) {
         LaunchedEffect(w.startMs) {
             while (true) { nowMs = System.currentTimeMillis(); delay(1000) }
         }
-        val elapsedS = ((nowMs - w.startMs) / 1000).coerceAtLeast(0)
+        val pauseMs = w.pausedDurationMs + (w.pausedAtMs?.let { nowMs - it } ?: 0L)
+        val elapsedS = ((nowMs - w.startMs - pauseMs) / 1000).coerceAtLeast(0)
         // Recording: the live banner, with Add kept visible below so a past workout can still be logged
         // mid-session (it used to live in the range bar).
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -234,7 +236,7 @@ fun WorkoutStartSection(vm: AppViewModel, onAdd: () -> Unit) {
             }
             AddWorkoutButton(onAdd, Modifier.fillMaxWidth())
         }
-    } else if (live.bonded) {
+    } else {
         // Start + Add as an equal-width action row (EXP-018 parity with the iOS workoutActionRow).
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
@@ -247,9 +249,6 @@ fun WorkoutStartSection(vm: AppViewModel, onAdd: () -> Unit) {
             ) { Text(uiString(R.string.l10n_workout_start_start_workout_d0f3f2cd), style = NoopType.captionNumber) }
             AddWorkoutButton(onAdd, Modifier.weight(1f))
         }
-    } else {
-        // No strap to stream from: no live Start, but keep Add so a user with no imports can still log.
-        AddWorkoutButton(onAdd, Modifier.fillMaxWidth())
     }
 
     if (showSportPicker) {

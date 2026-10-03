@@ -162,6 +162,10 @@ that premise:
 
 ## Features
 
+The **Runs addon** adds GPS run recording, live position, run history, weekly distance and
+kilometre/mile split analysis using NOOP's native design. Open **Runs** in the Mac sidebar or
+**Workouts → Runs** on iPhone and Android. See [Runs addon](docs/RUNS.md) for recording and analysis details.
+
 The macOS reference app organizes everything behind a single sidebar
 (`Strand/App/RootView.swift`). Each item below is a real screen in
 `Strand/Screens/`. The same feature set ships on macOS, Android, and iOS via the

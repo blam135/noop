@@ -29,6 +29,7 @@ enum TabRoute: Hashable {
     case metricSourced(key: String, source: String)
     case metricExplorer
     case workouts
+    case runs
     case dataSources
     case stress
     case sleep
@@ -65,6 +66,7 @@ extension View {
                 }
             case .metricExplorer: MetricExplorerView()
             case .workouts: WorkoutsView()
+            case .runs: RunsView()
             case .dataSources: DataSourcesView()
             case .stress: StressView()
             case .sleep: SleepView()

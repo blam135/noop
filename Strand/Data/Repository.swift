@@ -2654,8 +2654,10 @@ final class Repository: ObservableObject {
     func deleteWorkout(_ row: WorkoutRow) async {
         if WorkoutSource.classify(row.source) == .detected { await dismissDetected(row); return }
         guard let store = await ensureStore() else { return }
-        _ = try? await store.deleteWorkouts(deviceId: deviceId, sport: row.sport,
-                                            from: row.startTs, to: row.startTs)
+        if (try? await store.deleteWorkouts(deviceId: deviceId, sport: row.sport,
+                                           from: row.startTs, to: row.startTs)) != nil {
+            RouteStore.remove(startTs: row.startTs, sport: row.sport)
+        }
     }
 
     /// #64: merge two-or-more overlapping / adjacent MANUAL or DETECTED sessions into ONE manual session
@@ -2703,9 +2705,15 @@ final class Repository: ObservableObject {
         }
 
         // Move the kept route onto the merged natural key, then drop it from the old key.
-        if let best = bestRoute, !(best.startTs == merged.startTs && best.sport == merged.sport) {
-            RouteStore.store(best.route, startTs: merged.startTs, sport: merged.sport)
-            RouteStore.remove(startTs: best.startTs, sport: best.sport)
+        if let best = bestRoute {
+            // A merged session cannot inherit the timing of only one constituent run. Keep the
+            // existing representative geometry, but show timed split analysis as unavailable.
+            var representative = best.route
+            representative.samples = nil
+            RouteStore.store(representative, startTs: merged.startTs, sport: merged.sport)
+            if !(best.startTs == merged.startTs && best.sport == merged.sport) {
+                RouteStore.remove(startTs: best.startTs, sport: best.sport)
+            }
         }
     }
 

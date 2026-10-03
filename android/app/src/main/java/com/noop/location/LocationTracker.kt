@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.callbackFlow
 /** A raw GPS reading before filtering. */
 data class RawFix(val lat: Double, val lon: Double, val accuracyM: Float, val tMs: Long)
 
+/** An accepted coordinate retains the platform timestamp for measured split timing. */
+data class AcceptedFix(val point: LatLng, val tMs: Long)
+
 /**
  * Pure, stateful filter: drops low-accuracy fixes and physically-impossible jumps, returns the
  * accepted [LatLng] or null. Keeps the last accepted fix to gate the next. Unit-tested.
@@ -28,11 +31,15 @@ class TrackFilter(
     private val maxSpeedMps: Double = 12.0, // ~43 km/h; well above running, below GPS teleports
 ) {
     private var last: RawFix? = null
+    fun reset() { last = null }
     fun accept(fix: RawFix): LatLng? {
-        if (fix.accuracyM > maxAccuracyM) return null
+        if (!fix.lat.isFinite() || !fix.lon.isFinite() || fix.lat !in -90.0..90.0 ||
+            fix.lon !in -180.0..180.0 || !fix.accuracyM.isFinite() ||
+            fix.accuracyM < 0 || fix.accuracyM > maxAccuracyM || fix.tMs < 0) return null
         val prev = last
         if (prev != null) {
             val dt = (fix.tMs - prev.tMs) / 1000.0
+            if (dt <= 0) return null
             if (dt > 0) {
                 val d = RouteMath.haversineMeters(LatLng(prev.lat, prev.lon), LatLng(fix.lat, fix.lon))
                 if (d / dt > maxSpeedMps) return null
@@ -54,14 +61,28 @@ class LocationTracker(private val context: Context) {
     // minDistanceM defaults to 0: let the platform deliver every time-based fix (every minIntervalMs)
     // so TrackFilter does the gating. A non-zero platform minDistance compounds with the accuracy gate
     // and suppressed fixes on a weak-signal run, contributing to the under-collected route (#324).
-    fun stream(minIntervalMs: Long = 2000, minDistanceM: Float = 0f): Flow<LatLng> = callbackFlow {
+    fun stream(minIntervalMs: Long = 2000, minDistanceM: Float = 0f, sinceMs: Long = 0L,
+               onUnavailable: () -> Unit = {}, minimumFixTime: () -> Long = { sinceMs }): Flow<AcceptedFix> = callbackFlow {
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val filter = TrackFilter()
-        val listener = LocationListener { loc: Location ->
-            filter.accept(RawFix(loc.latitude, loc.longitude, if (loc.hasAccuracy()) loc.accuracy else 0f, loc.time))
-                ?.let { trySend(it) }
+        val listener = object : LocationListener {
+            override fun onLocationChanged(loc: Location) {
+                if (loc.time < minimumFixTime()) return
+                filter.accept(RawFix(loc.latitude, loc.longitude, if (loc.hasAccuracy()) loc.accuracy else Float.POSITIVE_INFINITY, loc.time))
+                    ?.let { trySend(AcceptedFix(it, loc.time)) }
+            }
+            override fun onProviderDisabled(provider: String) {
+                if (provider == LocationManager.GPS_PROVIDER) {
+                    filter.reset()
+                    onUnavailable()
+                }
+            }
+            override fun onProviderEnabled(provider: String) = Unit
+            @Deprecated("Legacy Android callback")
+            override fun onStatusChanged(provider: String, status: Int, extras: android.os.Bundle?) = Unit
         }
         try {
+            if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) onUnavailable()
             lm.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER, minIntervalMs, minDistanceM, listener, Looper.getMainLooper(),
             )

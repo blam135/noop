@@ -66,6 +66,7 @@ fun LiveWorkoutScreen(vm: AppViewModel, onClose: () -> Unit) {
     val unitSystem = UnitPrefs.system(context)
     val bpm by vm.bpm.collectAsStateWithLifecycle()
     val activeWorkout by vm.activeWorkout.collectAsStateWithLifecycle()
+    val gps by com.noop.location.GpsSession.state.collectAsStateWithLifecycle()
     // Additive: instantaneous speed/cadence/power from a connected standard fitness sensor (RSC/CSC/CPS),
     // read ALONGSIDE HR by the SourceCoordinator's isolated StandardHrSource. Empty (all-null) when no such
     // sensor is feeding, so the readout below hides entirely — a plain HR-only workout looks unchanged. HR
@@ -199,6 +200,28 @@ fun LiveWorkoutScreen(vm: AppViewModel, onClose: () -> Unit) {
                         value = UnitFormatter.distanceFromMeters(w.distanceM, unitSystem), accent = Palette.effortColor)
                     StatTile(modifier = Modifier.weight(1f), label = uiString(R.string.l10n_live_screen_pace_7a9a6226),
                         value = UnitFormatter.paceFromSecPerKm(w.paceSecPerKm, unitSystem), accent = Palette.effortColor)
+                }
+            }
+            if (w.gpsRequested) {
+                NoopCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(Metrics.space8)) {
+                        val status = when {
+                            w.pausedAtMs != null -> R.string.runs_location_paused
+                            !w.gpsEnabled -> R.string.runs_location_denied
+                            gps.unavailable -> R.string.runs_location_unavailable
+                            w.track.isEmpty() -> R.string.runs_location_waiting
+                            else -> R.string.runs_location_recording
+                        }
+                        Text(uiString(status), style = NoopType.subhead, color = Palette.textPrimary)
+                        if (w.track.isNotEmpty()) {
+                            val polyline = remember(w.track) { com.noop.analytics.RouteMath.encode(w.track) }
+                            RouteCanvas(polyline, segmentStartIndices = gps.segmentStartIndices)
+                            val point = w.track.last()
+                            Text(uiString(R.string.runs_coordinates, com.noop.analytics.RouteMath.formatCoordinates(point)),
+                                style = NoopType.captionNumber, color = Palette.textSecondary)
+                        }
+                        Text(uiString(R.string.runs_offline_route), style = NoopType.footnote, color = Palette.textTertiary)
+                    }
                 }
             }
 

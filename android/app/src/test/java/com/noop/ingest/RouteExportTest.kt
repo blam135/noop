@@ -52,6 +52,18 @@ class RouteExportTest {
         assertEquals(endTs, a.endTs)
     }
 
+    @Test fun gpxPreservesDiscontinuousSegments() {
+        val xml = RouteExport.buildGpx(route, startTs, endTs, "running", segmentStartIndices = listOf(2))
+        assertEquals(2, "<trkseg>".toRegex().findAll(xml).count())
+        assertEquals(4, "<trkpt ".toRegex().findAll(xml).count())
+        assertTrue(xml.indexOf("</trkseg>") < xml.indexOf("37.335900"))
+    }
+
+    @Test
+    fun fitRequiresContinuousRoute() {
+        assertEquals(0, RouteExport.render(RouteExport.Format.FIT, route, startTs, endTs, "running", segmentStartIndices = listOf(2)).size)
+    }
+
     @Test fun fitRoundTripsThroughTheImporter() {
         val bytes = RouteExport.buildFit(
             route, startTs, endTs, "cycling",

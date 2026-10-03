@@ -24,6 +24,7 @@ object RouteExportShare {
         format: RouteExport.Format,
         track: List<RouteMath.LatLng>,
         row: WorkoutRow,
+        segmentStartIndices: List<Int> = emptyList(),
     ) {
         runCatching {
             val filename = "noop-route-${row.startTs}.${format.ext}"
@@ -31,9 +32,12 @@ object RouteExportShare {
             // string/byte build, and file IO must never block the UI. Only the chooser launch stays on Main.
             val file = withContext(Dispatchers.IO) {
                 val points = track.map { RouteExport.Point(it.lat, it.lon) }
+                val breaks = com.noop.location.RunTrackStore(context.applicationContext).load(row.startTs, row.sport)
+                    ?.segmentStartIndices ?: segmentStartIndices
                 val bytes = RouteExport.render(
                     format, points, row.startTs, row.endTs, row.sport,
                     distanceM = row.distanceM, energyKcal = row.energyKcal, avgHr = row.avgHr, maxHr = row.maxHr,
+                    segmentStartIndices = breaks,
                 )
                 File(File(context.cacheDir, "exports").apply { mkdirs() }, filename)
                     .apply { writeBytes(bytes) }

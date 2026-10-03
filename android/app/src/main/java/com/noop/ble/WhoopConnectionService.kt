@@ -243,6 +243,12 @@ class WhoopConnectionService : Service() {
         // The notification "Disconnect" action routes back here as a self-intent.
         if (intent?.action == ACTION_STOP) {
             runCatching { ble.disconnect() }
+            // Disconnect owns BLE only. A GPS run retains its foreground location collector until
+            // End/Discard clears GpsSession, including when the strap has never been paired.
+            if (GpsSession.state.value.active) {
+                startForegroundCompat(buildNotification(ble.state.value, null), tracking = true)
+                return START_NOT_STICKY
+            }
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -252,7 +258,8 @@ class WhoopConnectionService : Service() {
         // Must call startForeground promptly after startForegroundService(). If it fails (e.g. the
         // API 34 connectedDevice type needs BLUETOOTH_CONNECT and the user denied it) we stop cleanly
         // rather than crash — the connection itself keeps working in the foreground regardless.
-        if (!startForegroundCompat(buildNotification(ble.state.value, null))) {
+        if (!startForegroundCompat(buildNotification(ble.state.value, null), tracking = GpsSession.state.value.active)) {
+            GpsSession.markUnavailable()
             stopSelf()
             return START_NOT_STICKY
         }
@@ -432,7 +439,7 @@ class WhoopConnectionService : Service() {
         gpsGateJob?.cancel()
         gpsGateJob = scope.launch {
             GpsSession.state
-                .map { it.active }
+                .map { it.active && !it.paused }
                 .distinctUntilChanged()
                 .collect { active ->
                     gpsJob?.cancel()
@@ -442,7 +449,10 @@ class WhoopConnectionService : Service() {
                         // permitted while tracking; on Android 14+ a service that reads location in the
                         // background must declare the location FGS type. Reverted to connectedDevice-only
                         // when the workout ends (active=false re-posts the base type).
-                        startForegroundCompat(buildNotification(ble.state.value, null), tracking = true)
+                        if (!startForegroundCompat(buildNotification(ble.state.value, null), tracking = true)) {
+                            GpsSession.markUnavailable()
+                            return@collect
+                        }
                         // Workouts & GPS test mode (Test Centre): wire the GpsSession fix-progress sink to the
                         // .workouts-tagged strap log ONLY when the WORKOUTS mode is on (one SharedPreferences
                         // bool read here). When off, the sink stays null and the route fold is byte-identical.
@@ -458,12 +468,17 @@ class WhoopConnectionService : Service() {
                             // LocationTracker fails SAFE (no permission / no provider just ends the
                             // stream); runCatching guards an OEM throw so it can't tear down the FGS.
                             runCatching {
-                                locationTracker.stream().collect { pt -> GpsSession.append(pt) }
-                            }
+                                locationTracker.stream(
+                                    sinceMs = GpsSession.minimumFixTime(),
+                                    onUnavailable = { GpsSession.markUnavailable() },
+                                    minimumFixTime = { GpsSession.minimumFixTime() },
+                                ).collect { fix -> GpsSession.append(fix) }
+                            }.onFailure { GpsSession.markUnavailable() }
+                            if (GpsSession.state.value.active && !GpsSession.state.value.paused) GpsSession.markUnavailable()
                         }
                     } else {
                         GpsSession.workoutsLog = null   // route finished: drop the test-mode sink
-                        startForegroundCompat(buildNotification(ble.state.value, null), tracking = false)
+                        startForegroundCompat(buildNotification(ble.state.value, null), tracking = GpsSession.state.value.active)
                     }
                 }
         }
@@ -512,7 +527,11 @@ class WhoopConnectionService : Service() {
         val type =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val locationType = if (tracking) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or locationType
+                val canConnect = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                    ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) ==
+                        android.content.pm.PackageManager.PERMISSION_GRANTED
+                val connectionType = if (canConnect) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
+                connectionType or locationType
             } else {
                 0
             }
@@ -678,6 +697,7 @@ class WhoopConnectionService : Service() {
 
         /** Drop the foreground promotion. The connection itself is torn down by the caller. */
         fun stop(context: Context) {
+            if (GpsSession.state.value.active) return
             runCatching { context.stopService(Intent(context, WhoopConnectionService::class.java)) }
         }
     }

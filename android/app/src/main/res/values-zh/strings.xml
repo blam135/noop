@@ -2358,4 +2358,38 @@
     <string name="workout_delete_message">这将停止记录并永久丢弃此次锻炼。</string>
     <string name="l10n_settings_screen_effort_exponential_scale">负荷：指数强度曲线</string>
     <string name="l10n_settings_screen_effort_exponential_scale_desc">以指数强度曲线（Banister TRIMP）计算负荷，而不是默认的心率区间（Edwards）。默认方式对低于心率储备一半的部分完全不计分，因此一小时力量训练——组间休息拉低了平均强度——可能几乎得零分。指数曲线没有下限，会大幅提高短时高强度努力的权重。会重新计算你的历史数据，两种标度的最高值相同。默认关闭。</string>
+
+    <!-- On-device running hub and measured GPS analysis. -->
+    <string name="runs_title">跑步</string>
+    <string name="runs_subtitle">路线、配速与进步。</string>
+    <string name="runs_close">关闭</string>
+    <string name="runs_start">开始跑步</string>
+    <string name="runs_open_workout">打开当前训练</string>
+    <string name="runs_range_days">%1$d 天</string>
+    <string name="runs_count">跑步次数</string>
+    <string name="runs_total_distance">总距离</string>
+    <string name="runs_active_time">活动时间</string>
+    <string name="runs_average_pace">平均配速</string>
+    <string name="runs_longest">最长跑步</string>
+    <string name="runs_summary_note">记录的距离与活动时间。配速优先使用实测 GPS 时间。</string>
+    <string name="runs_empty">此期间没有跑步。开始跑步或选择更长时间范围。</string>
+    <string name="runs_weekly_distance">每周距离</string>
+    <string name="runs_week_start">%1$s 所在周</string>
+    <string name="runs_recent">最近跑步</string>
+    <string name="runs_show_more">显示更多</string>
+    <string name="runs_route">记录路线</string>
+    <string name="runs_coordinates">位置：%1$s</string>
+    <string name="runs_offline_route">离线路线轨迹与坐标，无需街道地图。</string>
+    <string name="runs_splits">分段</string>
+    <string name="runs_split">分段</string>
+    <string name="runs_partial_split">%1$d · 不完整</string>
+    <string name="runs_splits_note">分段配速从首次有效 GPS 定位开始计时，并扣除暂停。最后的不完整分段为剩余距离。</string>
+    <string name="runs_splits_unavailable">此跑步没有分段计时数据。新的 GPS 记录会保存带时间的样本。</string>
+    <string name="runs_location_paused">位置记录已暂停</string>
+    <string name="runs_location_denied">位置权限被拒绝。正在记录时间，不记录路线。</string>
+    <string name="runs_location_unavailable">无法获取位置。请检查位置权限与 GPS 设置。</string>
+    <string name="runs_location_waiting">正在等待精确的 GPS 定位…</string>
+    <string name="runs_location_recording">正在记录 GPS 路线</string>
+    <string name="runs_export_gap_note">暂停与记录中断会保存为独立的 GPX 路线段。</string>
+    <string name="runs_pace_chart_unit">分钟/%1$s</string>
 </resources>

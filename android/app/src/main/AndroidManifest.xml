@@ -42,6 +42,7 @@
          opted out of location via neverForLocation above. Capping this at API 30 made GPS workouts
          crash on Android 12+ because the permission could never be held. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Keep the BLE link alive while collecting/offloading in the background. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

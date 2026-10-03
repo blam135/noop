@@ -35,13 +35,17 @@ public enum RouteExporter {
         distanceM: Double? = nil,
         energyKcal: Double? = nil,
         avgHr: Int? = nil,
-        maxHr: Int? = nil
+        maxHr: Int? = nil,
+        segmentStartIndices: [Int] = []
     ) -> Data {
         switch format {
         case .gpx:
             return Data(buildGpx(route: route, startTs: startTs, endTs: endTs, sport: sport,
-                                 distanceM: distanceM).utf8)
+                                 distanceM: distanceM, segmentStartIndices: segmentStartIndices).utf8)
         case .fit:
+            // FIT's current encoder has no recording-gap events. Refuse an unsupported export
+            // instead of converting separate recorded segments into an invented connecting leg.
+            guard !segmentStartIndices.contains(where: { $0 > 0 && $0 < route.count }) else { return Data() }
             return buildFit(route: route, startTs: startTs, endTs: endTs, sport: sport,
                             distanceM: distanceM, energyKcal: energyKcal, avgHr: avgHr, maxHr: maxHr)
         }
@@ -53,10 +57,12 @@ public enum RouteExporter {
         startTs: Int,
         endTs: Int,
         sport: String?,
-        distanceM: Double? = nil
+        distanceM: Double? = nil,
+        segmentStartIndices: [Int] = []
     ) -> String {
         let canon = canonicalSport(sport)
         let times = interpolatedTimes(route.count, startTs, endTs)
+        let starts = Set(segmentStartIndices.filter { $0 > 0 && $0 < route.count })
         var s = ""
         s += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         s += "<gpx version=\"1.1\" creator=\"NOOP\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n"
@@ -66,6 +72,7 @@ public enum RouteExporter {
         s += "    <type>\(xmlEscape(canon))</type>\n"
         s += "    <trkseg>\n"
         for i in route.indices {
+            if starts.contains(i) { s += "    </trkseg>\n    <trkseg>\n" }
             let p = route[i]
             s += "      <trkpt lat=\"\(coord(p.lat))\" lon=\"\(coord(p.lon))\">"
             s += "<time>\(iso(times[i]))</time></trkpt>\n"

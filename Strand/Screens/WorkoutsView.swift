@@ -32,6 +32,7 @@ struct WorkoutsView: View {
     @EnvironmentObject var model: AppModel
     @State private var showLiveWorkout = false
     @State private var showStartSport = false
+    @State private var showRuns = false
 
     // Imperial/Metric display preference (D#103). Workout distances are stored in metres; the toggle
     // re-labels them to miles/yards. Display-only — nothing on disk changes.
@@ -276,6 +277,23 @@ struct WorkoutsView: View {
                 // Inject the shared live snapshot so the in-exercise sensor readout (speed/cadence/power)
                 // resolves here too, matching how LiveView presents the same screen.
                 .environmentObject(model.live)
+        }
+        .sheet(isPresented: $showRuns) {
+            NavigationStack {
+                RunsView()
+                    .environmentObject(repo)
+                    .environmentObject(model)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { showRuns = false }
+                        }
+                    }
+            }
+            #if os(iOS)
+            .noopSheetPresentation(largeFirst: true)
+            #else
+            .frame(minWidth: 620, minHeight: 720)
+            #endif
         }
         // #519: name the sport before a live session starts, then open the in-exercise view directly
         // (same direct present as the button's already-active path — no cross-view auto-present race).
@@ -609,11 +627,16 @@ struct WorkoutsView: View {
 
     /// Equal-width primary actions share the same content width as every card below them.
     private var workoutActionRow: some View {
-        HStack(spacing: NoopMetrics.rowSpacing) {
-            startLiveWorkoutButton
-                .frame(maxWidth: .infinity)
-            addWorkoutButton
-                .frame(maxWidth: .infinity)
+        VStack(spacing: NoopMetrics.rowSpacing) {
+            NoopButton("Runs", systemImage: "figure.run.circle", kind: .secondary, fullWidth: true) {
+                showRuns = true
+            }
+            HStack(spacing: NoopMetrics.rowSpacing) {
+                startLiveWorkoutButton
+                    .frame(maxWidth: .infinity)
+                addWorkoutButton
+                    .frame(maxWidth: .infinity)
+            }
         }
         .frame(maxWidth: .infinity)
     }

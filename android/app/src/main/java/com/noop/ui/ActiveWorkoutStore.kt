@@ -71,6 +71,7 @@ object ActiveWorkoutPersistence {
         val liveStrain: Double,
         val pausedAtMs: Long? = null,
         val pausedDurationMs: Long = 0L,
+        val gpsRequested: Boolean = false,
     )
 
     /** Encode a snapshot to the compact line format. */
@@ -87,7 +88,7 @@ object ActiveWorkoutPersistence {
             .append(sanitize(s.sportName)).append(FIELD)
             .append(sanitize(s.deviceId)).append(FIELD)
             .append(s.pausedAtMs ?: 0L).append(FIELD)
-            .append(s.pausedDurationMs)
+            .append(s.pausedDurationMs).append(FIELD).append(if (s.gpsRequested) 1 else 0)
         for (hr in s.samples) {
             sb.append(LINE).append(hr.ts).append(',').append(hr.bpm)
         }
@@ -131,6 +132,7 @@ object ActiveWorkoutPersistence {
             liveStrain = if (liveStrain.isFinite()) liveStrain.coerceAtLeast(0.0) else 0.0,
             pausedAtMs = header.getOrNull(7)?.toLongOrNull()?.takeIf { it > 0L },
             pausedDurationMs = header.getOrNull(8)?.toLongOrNull()?.coerceAtLeast(0L) ?: 0L,
+            gpsRequested = header.getOrNull(9) == "1",
         )
     }
 

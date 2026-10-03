@@ -39,4 +39,15 @@ class TrackFilterTest {
         val p = f.accept(fix(51.50013, -0.1200, 8f, 10_000))
         assertEquals(51.50013, p!!.lat, 1e-6)
     }
+
+    @Test fun invalidCoordinatesAccuracyAndRegressingTimesRejected() {
+        val f = TrackFilter()
+        assertNull(f.accept(fix(Double.NaN, 0.0, 8f, 0)))
+        assertNull(f.accept(fix(91.0, 0.0, 8f, 0)))
+        assertNull(f.accept(fix(0.0, 0.0, Float.NaN, 0)))
+        assertNull(f.accept(fix(0.0, 0.0, -1f, 0)))
+        f.accept(fix(0.0, 0.0, 8f, 1000))
+        assertNull(f.accept(fix(0.001, 0.0, 8f, 1000)))
+        assertNull(f.accept(fix(0.001, 0.0, 8f, 500)))
+    }
 }

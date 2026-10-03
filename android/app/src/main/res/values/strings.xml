@@ -2470,4 +2470,38 @@
     <string name="workout_delete_message">This stops recording and permanently discards the workout.</string>
     <string name="l10n_settings_screen_effort_exponential_scale">Effort: exponential intensity scale</string>
     <string name="l10n_settings_screen_effort_exponential_scale_desc">Scores Effort on an exponential intensity curve (Banister TRIMP) instead of the default heart-rate zones (Edwards). The default earns nothing below half of your heart-rate reserve, so an hour of lifting — where hard sets average out against the rests — can score close to zero. The exponential curve has no floor and weights short, hard efforts far more heavily. Re-scores your history, and both scales reach the same maximum. Off by default.</string>
+
+    <!-- On-device running hub and measured GPS analysis. -->
+    <string name="runs_title">Runs</string>
+    <string name="runs_subtitle">Your routes, pace, and progress.</string>
+    <string name="runs_close">Close</string>
+    <string name="runs_start">Start run</string>
+    <string name="runs_open_workout">Open active workout</string>
+    <string name="runs_range_days">%1$d days</string>
+    <string name="runs_count">Runs</string>
+    <string name="runs_total_distance">Total distance</string>
+    <string name="runs_active_time">Active time</string>
+    <string name="runs_average_pace">Average pace</string>
+    <string name="runs_longest">Longest run</string>
+    <string name="runs_summary_note">Recorded distance and active time. Pace uses measured GPS time when available.</string>
+    <string name="runs_empty">No runs in this period. Start a run or choose a longer range.</string>
+    <string name="runs_weekly_distance">Weekly distance</string>
+    <string name="runs_week_start">Week of %1$s</string>
+    <string name="runs_recent">Recent runs</string>
+    <string name="runs_show_more">Show more</string>
+    <string name="runs_route">Recorded route</string>
+    <string name="runs_coordinates">Location: %1$s</string>
+    <string name="runs_offline_route">Offline route trace and coordinates. Street map tiles are not required.</string>
+    <string name="runs_splits">Splits</string>
+    <string name="runs_split">Split</string>
+    <string name="runs_partial_split">%1$d · partial</string>
+    <string name="runs_splits_note">Split pace uses GPS time from the first accepted fix and excludes pauses. A partial split is the remaining distance.</string>
+    <string name="runs_splits_unavailable">Split timing is unavailable for this run. New GPS recordings save timed samples.</string>
+    <string name="runs_location_paused">Location recording paused</string>
+    <string name="runs_location_denied">Location permission denied. Recording time without a route.</string>
+    <string name="runs_location_unavailable">Location unavailable. Check location permission and GPS settings.</string>
+    <string name="runs_location_waiting">Waiting for an accurate GPS fix…</string>
+    <string name="runs_location_recording">GPS route recording</string>
+    <string name="runs_export_gap_note">Pauses and recording gaps are preserved as separate GPX segments.</string>
+    <string name="runs_pace_chart_unit">min/%1$s</string>
 </resources>

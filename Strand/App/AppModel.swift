@@ -862,7 +862,10 @@ final class AppModel: ObservableObject {
         let samples = w.samples
         // Save when there's an HR window OR a real GPS route , a GPS-only walk (HR not streaming) is
         // still a workout (parity with Android's `samples.size < 2 && track.size < 2` discard gate).
-        guard samples.count >= 2 || route != nil else {
+        // A run still has useful timing when GPS permission is denied or no sensor is connected.
+        // Keep its measured duration without inventing distance, pace or heart rate.
+        let hasRunTiming = RunAnalysis.isRunningSport(w.sport) && w.elapsed(at: Date()) >= 10
+        guard samples.count >= 2 || route != nil || hasRunTiming else {
             // Workouts & GPS test mode: record WHY a session vanished (too short / no route), tagged `.workouts`.
             emitWorkoutsTrace(WorkoutsTrace.sessionLine(
                 event: "discarded", sportKey: WorkoutSource.traceSportKey(w.sport),

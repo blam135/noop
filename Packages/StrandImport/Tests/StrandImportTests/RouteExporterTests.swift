@@ -31,6 +31,22 @@ final class RouteExporterTests: XCTestCase {
         XCTAssertEqual(Int(a!.end.timeIntervalSince1970), endTs)
     }
 
+    func testGpxKeepsRecordingGapsInSeparateTrackSegments() {
+        let data = RouteExporter.render(.gpx, route: route, startTs: startTs, endTs: endTs,
+                                        sport: "running", segmentStartIndices: [2, 2, -1, 999])
+        let xml = String(decoding: data, as: UTF8.self)
+        XCTAssertEqual(xml.components(separatedBy: "<trkseg>").count - 1, 2)
+        XCTAssertEqual(xml.components(separatedBy: "</trkseg>").count - 1, 2)
+        XCTAssertEqual(xml.components(separatedBy: "<trkpt ").count - 1, route.count)
+        let activity = ActivityFileImporter.parse(data: data, filename: "segmented.gpx").activity
+        XCTAssertEqual(activity?.route.count, route.count)
+    }
+
+    func testFitCannotFlattenRecordingGaps() {
+        XCTAssertTrue(RouteExporter.render(.fit, route: route, startTs: startTs, endTs: endTs,
+                                           sport: "run", segmentStartIndices: [2]).isEmpty)
+    }
+
     func testFitRoundTripsThroughTheImporter() {
         let data = RouteExporter.render(.fit, route: route, startTs: startTs, endTs: endTs,
                                         sport: "cycling", distanceM: 1234.5, energyKcal: 210, avgHr: 142, maxHr: 171)

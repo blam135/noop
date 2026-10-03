@@ -2449,4 +2449,38 @@
     <string name="workout_delete_message">Spowoduje to zatrzymanie nagrywania i trwałe odrzucenie treningu.</string>
     <string name="l10n_settings_screen_effort_exponential_scale">Wysiłek: wykładnicza skala intensywności</string>
     <string name="l10n_settings_screen_effort_exponential_scale_desc">Ocenia Wysiłek według wykładniczej krzywej intensywności (TRIMP Banistera) zamiast domyślnych stref tętna (Edwards). Ustawienie domyślne nie liczy niczego poniżej połowy rezerwy tętna, więc godzina treningu siłowego — gdzie ciężkie serie uśredniają się z przerwami — może dać wynik bliski zeru. Krzywa wykładnicza nie ma progu i znacznie mocniej waży krótkie, intensywne wysiłki. Przelicza historię, a obie skale osiągają to samo maksimum. Domyślnie wyłączone.</string>
+
+    <!-- On-device running hub and measured GPS analysis. -->
+    <string name="runs_title">Biegi</string>
+    <string name="runs_subtitle">Trasy, tempo i postępy.</string>
+    <string name="runs_close">Zamknij</string>
+    <string name="runs_start">Rozpocznij bieg</string>
+    <string name="runs_open_workout">Otwórz aktywny trening</string>
+    <string name="runs_range_days">%1$d dni</string>
+    <string name="runs_count">Biegi</string>
+    <string name="runs_total_distance">Łączny dystans</string>
+    <string name="runs_active_time">Czas aktywności</string>
+    <string name="runs_average_pace">Średnie tempo</string>
+    <string name="runs_longest">Najdłuższy bieg</string>
+    <string name="runs_summary_note">Zapisany dystans i czas aktywności. Tempo korzysta z mierzonego czasu GPS, jeśli jest dostępny.</string>
+    <string name="runs_empty">Brak biegów w tym okresie. Rozpocznij bieg lub wybierz dłuższy zakres.</string>
+    <string name="runs_weekly_distance">Tygodniowy dystans</string>
+    <string name="runs_week_start">Tydzień od %1$s</string>
+    <string name="runs_recent">Ostatnie biegi</string>
+    <string name="runs_show_more">Pokaż więcej</string>
+    <string name="runs_route">Zapisana trasa</string>
+    <string name="runs_coordinates">Lokalizacja: %1$s</string>
+    <string name="runs_offline_route">Trasa i współrzędne offline. Mapy ulic nie są wymagane.</string>
+    <string name="runs_splits">Odcinki</string>
+    <string name="runs_split">Odcinek</string>
+    <string name="runs_partial_split">%1$d · niepełny</string>
+    <string name="runs_splits_note">Tempo odcinka wykorzystuje czas GPS od pierwszej zaakceptowanej pozycji bez przerw. Niepełny odcinek to pozostały dystans.</string>
+    <string name="runs_splits_unavailable">Czasy odcinków nie są dostępne dla tego biegu. Nowe zapisy GPS zachowują próbki z czasem.</string>
+    <string name="runs_location_paused">Zapis lokalizacji wstrzymany</string>
+    <string name="runs_location_denied">Odmowa dostępu do lokalizacji. Zapisywany jest czas bez trasy.</string>
+    <string name="runs_location_unavailable">Lokalizacja niedostępna. Sprawdź uprawnienia i ustawienia GPS.</string>
+    <string name="runs_location_waiting">Oczekiwanie na dokładną pozycję GPS…</string>
+    <string name="runs_location_recording">Zapisywanie trasy GPS</string>
+    <string name="runs_export_gap_note">Przerwy i luki w zapisie są zachowane jako osobne segmenty GPX.</string>
+    <string name="runs_pace_chart_unit">min/%1$s</string>
 </resources>

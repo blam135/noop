@@ -1,29 +1,16 @@
 package com.noop.location
 
+import android.content.Context
 import com.noop.analytics.RouteMath
 import com.noop.analytics.RouteMath.LatLng
+import com.noop.analytics.RunAnalysis
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * Process-level holder for the in-flight GPS workout's route, owned by [com.noop.NoopApplication]
- * and driven by [com.noop.ble.WhoopConnectionService] — NOT by the Activity-scoped AppViewModel.
- *
- * Why this exists: the route used to be collected in `AppViewModel.viewModelScope`, which Android
- * cancels the moment the ViewModel is cleared (screen off / Activity backgrounded). The collection
- * stopped mid-ride and distance froze (#215 — a 2.84 km ride banked as 0.38 km). The track now lives
- * here, at the process level, and the always-on foreground service feeds it from the platform
- * LocationManager, so it survives the UI going away. The ViewModel observes [state] for live display
- * and reads the final [State.track] when ending the workout; it no longer owns the location stream.
- *
- * Distance/pace are derived here (off the same [RouteMath] helpers AppViewModel used) so the running
- * totals are correct even across periods when no UI is observing.
- */
+/** Process-owned GPS recording, driven by the foreground service and checkpointed on device. */
 object GpsSession {
-
-    /** A GPS workout's accumulated route. [startMs] anchors pace; [active] gates the service collector.
-     *  [sportName] lets the UI rehydrate the active-workout card if the ViewModel was cleared mid-ride. */
+    const val MAX_POINTS = 50_000
     data class State(
         val active: Boolean = false,
         val startMs: Long = 0L,
@@ -34,66 +21,132 @@ object GpsSession {
         val paused: Boolean = false,
         val pausedAtMs: Long? = null,
         val pausedDurationMs: Long = 0L,
+        val samples: List<RunAnalysis.Sample> = emptyList(),
+        val originActiveMs: Long? = null,
+        val lastFixMs: Long = 0L,
+        val unavailable: Boolean = false,
+        val segmentStartIndices: List<Int> = emptyList(),
     )
 
     private val _state = MutableStateFlow(State())
-    /** The live route, observed by the UI (via AppViewModel) and the service's collect-gate. */
     val state: StateFlow<State> = _state.asStateFlow()
-
-    /** Workouts & GPS test mode (Test Centre): the tagged sink for the .workouts GPS-fix lines, wired by
-     *  [com.noop.ble.WhoopConnectionService] (which holds the BLE client + the gate). Default null (inert) so
-     *  the route fold is byte-identical when the mode is off. The service ALWAYS checks the WORKOUTS gate
-     *  before setting this, so [append] pays nothing extra when off. Diagnostic only - it never changes the
-     *  route. The Android LocationTracker pre-filters UPSTREAM, so every appended fix is already ACCEPTED and
-     *  the raw pre-filter count is not available at this seam; the gps line passes rawFixes = null (reads
-     *  `n/a`) rather than imply an accept rate the platform never measured (the macOS recorder, which sees
-     *  the raw stream, passes a real count). L4. */
     var workoutsLog: ((String) -> Unit)? = null
+    private var previousPoint: LatLng? = null
+    private var minimumFixMs: Long = 0L
+    private var checkpoint: GpsCheckpointStore? = null
+    private var lastCheckpointMs = 0L
 
-    /** Begin a route for [sportName]'s workout started at [startMs]. A re-arm just resets the track. */
+    /** Called once by the Application. Restore route/time without joining an unrecorded gap. */
+    fun initialize(context: Context) {
+        if (checkpoint != null) return
+        checkpoint = GpsCheckpointStore(context)
+        checkpoint?.load()?.let { restore(it) }
+    }
+
+    internal fun restore(snapshot: State, nowMs: Long = System.currentTimeMillis()) {
+        _state.value = snapshot
+        previousPoint = null
+        minimumFixMs = nowMs
+        lastCheckpointMs = 0
+    }
+
     fun start(startMs: Long, sportName: String) {
+        if (_state.value.active) return
+        previousPoint = null
+        minimumFixMs = startMs
         _state.value = State(active = true, startMs = startMs, sportName = sportName)
+        persist(force = true)
     }
 
-    /** Fold one accepted fix into the route, recomputing distance + pace. No-op when not active. */
-    fun append(pt: LatLng) {
+    /** Fold measured fixes in constant distance work. A pause/restore clears continuity. */
+    fun append(fix: AcceptedFix) {
         val s = _state.value
-        if (!s.active || s.paused) return
-        val track = s.track + pt
-        val dist = RouteMath.totalMeters(track)
-        val secs = (System.currentTimeMillis() - s.startMs - s.pausedDurationMs) / 1000.0
-        _state.value = s.copy(track = track, distanceM = dist, paceSecPerKm = RouteMath.paceSecPerKm(dist, secs))
-        // Workouts & GPS test mode: one GPS-fix-progress line per accepted fix, only when the service wired a
-        // sink (the WORKOUTS gate was on). The LocationTracker pre-filters UPSTREAM, so the raw pre-filter
-        // count is not available at this seam (every fix here is already accepted). Pass rawFixes = null so
-        // the line reads `rawFixes=n/a` instead of `rawFixes == accepted`, which would falsely imply a 100%
-        // accept rate the platform never actually measured (macOS, which sees the raw stream, passes a real
-        // count). L4.
-        workoutsLog?.invoke(
-            com.noop.analytics.WorkoutsTrace.gpsLine(
-                rawFixes = null, acceptedPoints = track.size, distanceM = dist,
-            ),
-        )
+        val pt = fix.point
+        if (!s.active || s.paused || fix.tMs < maxOf(s.startMs, minimumFixMs) ||
+            (s.lastFixMs > 0 && fix.tMs <= s.lastFixMs) ||
+            !pt.lat.isFinite() || !pt.lon.isFinite() || pt.lat !in -90.0..90.0 || pt.lon !in -180.0..180.0) return
+        val activeMs = (fix.tMs - s.startMs - s.pausedDurationMs).coerceAtLeast(0)
+        val origin = s.originActiveMs ?: activeMs
+        val elapsed = ((activeMs - origin).coerceAtLeast(0)) / 1000.0
+        val dist = s.distanceM + (previousPoint?.let { RouteMath.haversineMeters(it, pt) } ?: 0.0)
+        val sample = RunAnalysis.Sample(dist, elapsed)
+        val timed = when {
+            s.samples.isEmpty() -> listOf(sample)
+            elapsed > s.samples.last().elapsedS -> compact(s.samples) + sample
+            else -> s.samples
+        }
+        val (retained, retainedBreaks) = compactTrack(s.track, s.segmentStartIndices)
+        val breaks = if (previousPoint == null && retained.isNotEmpty()) retainedBreaks + retained.size else retainedBreaks
+        val track = retained + pt
+        previousPoint = pt
+        _state.value = s.copy(track = track, distanceM = dist, samples = timed,
+            originActiveMs = origin, lastFixMs = fix.tMs, unavailable = false,
+            segmentStartIndices = breaks, paceSecPerKm = RouteMath.paceSecPerKm(dist, elapsed))
+        persist(nowMs = fix.tMs)
+        workoutsLog?.invoke(com.noop.analytics.WorkoutsTrace.gpsLine(
+            rawFixes = null, acceptedPoints = track.size, distanceM = dist))
     }
 
-    /** End the route and clear it. Returns the final accumulated track for the saved WorkoutRow. */
+    /** Mark a provider/permission failure visibly, while retaining recorded data. */
+    fun markUnavailable(nowMs: Long = System.currentTimeMillis()) {
+        if (_state.value.active) {
+            _state.value = _state.value.copy(unavailable = true)
+            previousPoint = null
+            minimumFixMs = nowMs
+        }
+    }
+
+    /** Ignore cached platform readings from before the latest resume/process restoration. */
+    fun minimumFixTime(): Long = minimumFixMs
+
     fun stop(): List<LatLng> {
         val track = _state.value.track
         _state.value = State()
+        previousPoint = null
+        checkpoint?.save(null)
         return track
     }
 
-    fun pause() {
+    fun pause(nowMs: Long = System.currentTimeMillis()) {
         val s = _state.value
-        if (s.active && !s.paused) _state.value = s.copy(paused = true, pausedAtMs = System.currentTimeMillis())
+        if (s.active && !s.paused) {
+            _state.value = s.copy(paused = true, pausedAtMs = nowMs)
+            previousPoint = null
+            minimumFixMs = nowMs
+            persist(force = true)
+        }
     }
 
-    fun resume() {
+    fun resume(nowMs: Long = System.currentTimeMillis()) {
         val s = _state.value
         if (s.active && s.paused) {
-            val added = s.pausedAtMs?.let { System.currentTimeMillis() - it } ?: 0L
+            val added = s.pausedAtMs?.let { (nowMs - it).coerceAtLeast(0) } ?: 0L
             _state.value = s.copy(paused = false, pausedAtMs = null,
-                pausedDurationMs = s.pausedDurationMs + added)
+                pausedDurationMs = s.pausedDurationMs + added, unavailable = false)
+            previousPoint = null
+            minimumFixMs = nowMs
+            persist(force = true)
         }
+    }
+
+    private fun persist(force: Boolean = false, nowMs: Long = System.currentTimeMillis()) {
+        if (force || nowMs - lastCheckpointMs >= 10_000) {
+            lastCheckpointMs = nowMs
+            checkpoint?.save(_state.value)
+        }
+    }
+
+    /** Keep the first/last measurement when long recordings need downsampling. */
+    private fun <T> compact(points: List<T>): List<T> =
+        if (points.size < MAX_POINTS) points else points.filterIndexed { index, _ ->
+            index % 2 == 0 || index == points.lastIndex
+        }
+
+    private fun compactTrack(points: List<LatLng>, breaks: List<Int>): Pair<List<LatLng>, List<Int>> {
+        if (points.size < MAX_POINTS) return points to breaks
+        val edges = breaks.flatMap { listOf(it - 1, it) }.toSet()
+        val kept = points.indices.filter { it % 2 == 0 || it == points.lastIndex || it in edges }
+        val positions = kept.withIndex().associate { it.value to it.index }
+        return kept.map { points[it] } to breaks.mapNotNull { positions[it] }
     }
 }
