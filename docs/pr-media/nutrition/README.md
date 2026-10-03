@@ -10,6 +10,8 @@ Food photo: [OpenCV fruits.jpg sample](https://github.com/opencv/opencv/blob/4.x
 
 ## iOS simulator preview
 
-The iOS daily-log screenshot was captured from the production SwiftUI Nutrition view on an iPhone 17 Pro simulator, using the existing DEBUG-only `--demo-screen nutrition` launcher. The simulator contains the same synthetic manual meal and attributed food photo as the Android preview. No live AI response is shown.
+The iOS daily-log and photo-editor screenshots were captured from the production SwiftUI Nutrition view on an iPhone 17 Pro simulator, using the existing DEBUG-only `--demo-screen nutrition` launcher. The simulator contains the same synthetic manual meal and attributed food photo as the Android preview. No live AI response is shown.
 
 The reproducible capture workflow is `.github/workflows/ios-nutrition-preview.yml`; it creates a temporary UI-test target in the generated Xcode project, seeds a disposable simulator, and exports XCTest screenshots. The UI capture also verifies that editing loads the selected meal and enables photo analysis.
+
+Verified capture: [GitHub Actions run](https://github.com/blam135/noop/actions/runs/37127466182), commit `9d31efd6e4fcf470e0c72d2c24f85cef6f50d1da`. The UI test passed after checking the saved food name and enabled photo analysis in the editor. Full macOS/iOS builds and macOS app tests also [passed](https://github.com/blam135/noop/actions/runs/37127509055).
