@@ -48,7 +48,10 @@ jobs:
           python3 Tools/ios-nutrition-preview/seed.py "$CONTAINER"
       - name: Capture production views
         run: |
-          xcodebuild -scheme NutritionPreview -configuration Debug -destination "platform=iOS Simulator,id=$PREVIEW_DEVICE" -derivedDataPath build/preview -resultBundlePath build/NutritionPreview.xcresult CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO test > capture-ios.log 2>&1
+          xcodebuild -scheme NutritionPreview -configuration Debug -destination "platform=iOS Simulator,id=$PREVIEW_DEVICE" -derivedDataPath build/preview -resultBundlePath build/NutritionPreview.xcresult -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO test > capture-ios.log 2>&1
+      - name: Export simulator screenshots
+        if: always()
+        run: |
           mkdir -p build/ios-preview
           xcrun xcresulttool export attachments --path build/NutritionPreview.xcresult --output-path build/ios-preview
       - uses: actions/upload-artifact@v4

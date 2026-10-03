@@ -10,7 +10,7 @@ photo = 'preview-fruit.jpg'
 # Use the same attributed OpenCV sample as the Android captures.
 import urllib.request
 urllib.request.urlretrieve('https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/fruits.jpg', folder / photo)
-meal = dict(id='preview-fruit', timestamp=time.time()*1000, name='Fruit bowl',
+meal = dict(id='edc2e835-114f-45bb-b21b-f08416ed6f98', timestamp=time.time()*1000, name='Fruit bowl',
             portion='One bowl', calories=180, protein=2, carbs=42, fat=1,
             notes='Manually entered demo values; no live AI analysis.', photo=photo,
             provider='', model='')
