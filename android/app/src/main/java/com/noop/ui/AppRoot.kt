@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Hexagon
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -165,6 +166,7 @@ internal enum class Destination(
     Compare("compare", R.string.nav_compare, Icons.AutoMirrored.Filled.CompareArrows),
 
     // Group: Health
+    Nutrition("nutrition", R.string.nav_nutrition, Icons.Filled.Restaurant),
     Health("health", R.string.nav_health, Icons.Filled.MonitorHeart),
     Hydration("hydration", R.string.nav_hydration, Icons.Filled.WaterDrop),
     VitalSigns("vital_signs", R.string.nav_vital_signs, Icons.Filled.HealthAndSafety),
@@ -242,7 +244,7 @@ internal val drawerGroups: List<DrawerGroup> = listOf(
         Destination.Insights, Destination.Explore, Destination.Compare,
     ), defaultExpanded = true),
     DrawerGroup("Body", R.string.more_group_body, listOf(
-        Destination.Live, Destination.Workouts, Destination.Health, Destination.VitalSigns,
+        Destination.Live, Destination.Workouts, Destination.Health, Destination.Nutrition, Destination.VitalSigns,
         Destination.LabBook, Destination.Stress, Destination.Breathe, Destination.Intervals,
         Destination.Rhythm,
     ), defaultExpanded = true),
@@ -694,6 +696,7 @@ fun AppRoot(viewModel: AppViewModel = viewModel()) {
                 }
                 composable(Destination.Intervals.route) { IntervalsScreen(viewModel) }
                 composable(Destination.Breathe.route) { BreatheScreen(viewModel) }
+                composable(Destination.Nutrition.route) { NutritionScreen() }
                 composable(Destination.Coach.route) {
                     // A normal push, so Back returns to the conversation (#2243).
                     CoachScreen(onOpenSettings = { nav.navigate(Destination.CoachSettings.route) })

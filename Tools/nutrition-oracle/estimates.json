@@ -1,0 +1,90 @@
+[
+  {
+    "case": "valid",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "fenced",
+    "input": "```json\n{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}\n```"
+  },
+  {
+    "case": "negative",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": -1, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "too-large",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 20001, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "negative-protein",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": -1, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "large-fat",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 5001, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "blank-name",
+    "input": "{\"name\": \" \\n\\t\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "numeric-string",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": \"540\", \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "boolean",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": true, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "null",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": null, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "long-name",
+    "input": "{\"name\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "unicode-long-name",
+    "input": "{\"name\": \"🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜🍜\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "unicode-name",
+    "input": "{\"name\": \"寿司 🍣\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "long-notes",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+  },
+  {
+    "case": "zero",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 0, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "upper-bound",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 20000, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "macro-bound",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 5000, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "missing-fat",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"notes\": \"Oil and serving size are uncertain.\"}"
+  },
+  {
+    "case": "no-food",
+    "input": "{\"error\": \"No food identified.\"}"
+  },
+  {
+    "case": "malformed",
+    "input": "not json"
+  },
+  {
+    "case": "array",
+    "input": "[{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"}]"
+  },
+  {
+    "case": "trailing",
+    "input": "{\"name\": \"Rice and chicken\", \"portion\": \"1 bowl\", \"calories\": 540.5, \"protein\": 35.0, \"carbs\": 65.0, \"fat\": 15.0, \"notes\": \"Oil and serving size are uncertain.\"} extra"
+  }
+]

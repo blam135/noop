@@ -89,8 +89,9 @@ network paths (the others are the Oura history import, §1.1b, and self-hosted p
 on your terms:
 
 - **Off until you enable it.** You enter your own API key for the provider you choose
-  (Anthropic, OpenAI, or a local / self-hosted OpenAI-compatible LLM such as Ollama or
-  LM Studio). No key, no network calls, ever.
+  (Anthropic, OpenAI, or Gemini), or explicitly configure a local / self-hosted
+  OpenAI-compatible LLM such as Ollama or LM Studio (a key may be optional there).
+  Without this configuration, no Coach or nutrition-analysis request runs.
 - **What is sent.** When you ask a question, NOOP builds a compact **text** summary of
   your recent metrics (Charge, Effort, Rest, HRV, resting HR over ~14 days, plus
   30-day averages and recent workouts) and sends it, with your question, directly to
@@ -99,6 +100,12 @@ on your terms:
   your own machine and the request never leaves it.
 - **What is NOT sent.** No raw biometric streams, no Bluetooth data, no account or
   device identifiers — only the summary text and your question.
+- **Nutrition photo analysis.** The Nutrition journal reuses these provider/model settings only
+  when **Analyze photo** is tapped. It sends the selected, resized JPEG and draft meal notes;
+  no strap metrics, conversation history, or saved meal history are included. Photos are re-encoded
+  without GPS/EXIF metadata before storage or transmission. The user reviews an editable estimate
+  before saving. Manual meal entry stays offline. Meals and photos are stored locally in a separate
+  journal and are not currently included in NOOP backups. See [Nutrition](NUTRITION.md).
 - **Your key, your relationship.** The request goes from your device straight to the
   provider you picked, under your own account. NOOP runs no server in between and keeps
   no copy.

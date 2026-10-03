@@ -476,6 +476,7 @@ struct RootTabView: View {
                     MoreRow("Workouts", "figure.run", .workouts)
                     MoreRow("Lift Log", "dumbbell.fill", .liftLog)
                     MoreRow("Health", "heart.text.square.fill", .health)
+                    MoreRow("Nutrition", "fork.knife", .nutrition)
                     MoreRow("Lab Book", "books.vertical.fill", .labBook)
                     MoreRow("Stress", "bolt.heart.fill", .stress)
                     MoreRow("Breathe", "wind", .breathe)
@@ -598,11 +599,11 @@ struct RootTabView: View {
 /// registration in `moreTab`.
 private enum MoreDestination: Hashable {
     case insightsHub, intelligence, coach, insights, explore, compare
-    case live, workouts, liftLog, health, labBook, stress, breathe, intervals, rhythm
+    case live, workouts, liftLog, health, nutrition, labBook, stress, breathe, intervals, rhythm
     case fusedRecord, appleHealth, miBand, dataSources, backupSync, shortcutsExport, noopLimitations
     case alarms, automations, testCentre, siriShortcuts, powerSaving, settings
 
-    @ViewBuilder var destination: some View {
+    @MainActor @ViewBuilder var destination: some View {
         switch self {
         case .insightsHub:     InsightsHubView()
         case .intelligence:    IntelligenceView()
@@ -613,6 +614,7 @@ private enum MoreDestination: Hashable {
         case .live:            LiveView()
         case .workouts:        WorkoutsView()
         case .liftLog:         LiftLogView()
+        case .nutrition:       NutritionView()
         case .health:          HealthView()
         case .labBook:         LabBookView()
         case .stress:          StressView()
