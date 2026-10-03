@@ -569,7 +569,7 @@ private struct iOSRootView: View {
 /// simulator build can be captured deterministically (verification + marketing). Stripped from Release.
 enum DemoScreens {
     /// The screen named by `--demo-screen <name>`, or nil if the arg is absent/unknown.
-    static var requested: AnyView? {
+    @MainActor static var requested: AnyView? {
         let args = CommandLine.arguments
         guard let i = args.firstIndex(of: "--demo-screen"), i + 1 < args.count else { return nil }
         switch args[i + 1].lowercased() {
@@ -585,6 +585,7 @@ enum DemoScreens {
         case "stress":   return AnyView(StressView())
         case "workouts": return AnyView(WorkoutsView())
         case "health":   return AnyView(HealthView())
+        case "nutrition": return AnyView(NutritionView())
         case "insights": return AnyView(InsightsView())
         case "explore":  return AnyView(MetricExplorerView())
         case "compare":  return AnyView(CompareView())
