@@ -7,8 +7,7 @@ from pathlib import Path
 folder = Path(sys.argv[1]) / 'Library/Application Support/Nutrition'
 folder.mkdir(parents=True, exist_ok=True)
 photo = 'preview-fruit.jpg'
-# Reuse the food-only region of the attributed OpenCV photo in the Android preview.
-# Pillow is deliberately unnecessary: fetch the original sample used in those captures.
+# Use the same attributed OpenCV sample as the Android captures.
 import urllib.request
 urllib.request.urlretrieve('https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/fruits.jpg', folder / photo)
 meal = dict(id='preview-fruit', timestamp=time.time()*1000, name='Fruit bowl',
